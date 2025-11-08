@@ -1,0 +1,10 @@
+site_name: pytest-xdist-rate-limit
+site_description: Fixtures to set rate limits on client code
+site_author: Xavier Vergés
+
+theme: readthedocs
+
+repo_url: https://github.com/xverges/pytest-xdist-rate-limit
+
+pages:
+- Home: index.md
