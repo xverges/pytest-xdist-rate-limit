@@ -110,7 +110,8 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_rate_limit_callable_with_token_bucket(pytester):
@@ -155,4 +156,5 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)

@@ -27,7 +27,8 @@ def test_creates_shared_json(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_on_first_worker_dict(pytester):
@@ -51,7 +52,8 @@ def test_on_first_worker_dict(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_on_first_worker_callable(pytester):
@@ -77,7 +79,8 @@ def test_on_first_worker_callable(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_on_first_worker_callable_must_return_dict(pytester):
@@ -106,7 +109,8 @@ def test_on_first_worker_callable_must_return_dict(pytester):
 
     result = pytester.runpytest("-v")
     # Should get an error during fixture setup
-    result.assert_outcomes(errors=1)
+    outcomes = result.parseoutcomes()
+    assert "errors" in outcomes and outcomes["errors"] == 1, str(result.stdout)
     result.stdout.fnmatch_lines(["*TypeError*must return a dict*"])
 
 
@@ -145,7 +149,8 @@ def test_on_last_worker_callback(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
     # Verify the callback was actually called by checking for the marker file
     assert marker_file.exists(), (
@@ -175,7 +180,8 @@ def test_custom_timeout(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_default_timeout(pytester):
@@ -195,7 +201,8 @@ def test_default_timeout(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_shared_location(pytester):
@@ -217,7 +224,8 @@ def test_shared_location(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_factory_with_xdist_workers(pytester):
@@ -336,7 +344,8 @@ def test_timeout_on_locked_dict(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_timeout_on_read(pytester):
@@ -368,7 +377,8 @@ def test_timeout_on_read(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_timeout_on_update(pytester):
@@ -400,7 +410,8 @@ def test_timeout_on_update(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_infinite_timeout_waits(pytester):
@@ -446,7 +457,8 @@ def test_infinite_timeout_waits(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_zero_timeout_fails_immediately(pytester):
@@ -482,7 +494,8 @@ def test_zero_timeout_fails_immediately(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_timeout_with_multiple_operations(pytester):
@@ -521,4 +534,5 @@ def test_timeout_with_multiple_operations(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)

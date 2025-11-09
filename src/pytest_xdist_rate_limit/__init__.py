@@ -15,5 +15,3 @@ __all__ = [
     "RateLimit",
     "TokenBucketRateLimiter",
 ]
-
-# Made with Bob

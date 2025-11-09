@@ -47,7 +47,8 @@ def test_basic_rate_limiting(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_hourly_rate_function(pytester):
@@ -87,7 +88,8 @@ def test_hourly_rate_function(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_exception_tracking(pytester):
@@ -126,7 +128,8 @@ def test_exception_tracking(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_max_calls_limit(pytester):
@@ -167,7 +170,8 @@ def test_max_calls_limit(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_rate_drift_detection(pytester):
@@ -225,7 +229,8 @@ def test_rate_drift_detection(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v", "-s")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_context_properties(pytester):
@@ -293,7 +298,8 @@ def test_context_properties(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=2)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 2, str(result.stdout)
 
 
 def test_concurrent_workers(pytester):
@@ -331,7 +337,8 @@ def test_concurrent_workers(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=3)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 3, str(result.stdout)
 
 
 def test_burst_capacity_default(pytester):
@@ -374,4 +381,5 @@ def test_burst_capacity_default(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)

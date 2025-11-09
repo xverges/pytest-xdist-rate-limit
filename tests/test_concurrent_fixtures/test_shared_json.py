@@ -26,7 +26,8 @@ def test_locked_dict_creates_file(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_locked_dict_reads_existing_file(pytester):
@@ -54,7 +55,8 @@ def test_locked_dict_reads_existing_file(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_locked_dict_handles_empty_file(pytester):
@@ -79,7 +81,8 @@ def test_locked_dict_handles_empty_file(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_locked_dict_supports_dict_operations(pytester):
@@ -117,7 +120,8 @@ def test_locked_dict_supports_dict_operations(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_read_returns_copy(pytester):
@@ -144,7 +148,8 @@ def test_read_returns_copy(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_read_empty_file(pytester):
@@ -163,7 +168,8 @@ def test_read_empty_file(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_update_merges_data(pytester):
@@ -188,7 +194,8 @@ def test_update_merges_data(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_json_serialization_types(pytester):
@@ -225,7 +232,8 @@ def test_json_serialization_types(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_timeout_parameter(pytester):
@@ -247,7 +255,8 @@ def test_timeout_parameter(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_name_property_strips_prefix(pytester):
@@ -271,7 +280,8 @@ def test_name_property_strips_prefix(pytester):
     """)
 
     result = pytester.runpytest("-v")
-    result.assert_outcomes(passed=1)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_concurrent_access_with_xdist(pytester):

@@ -37,7 +37,8 @@ def test_rate_limiter_fixture_factory_basic(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=2)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 2, str(result.stdout)
 
 
 def test_rate_limiter_with_load_test_and_exit_callback(pytester):
@@ -166,7 +167,8 @@ def test_rate_limiter_dynamic_rate(pytester):
         """
     )
     result = pytester.runpytest("-n", "2", "-v")
-    result.assert_outcomes(passed=2)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 2, str(result.stdout)
 
 
 def test_rate_limiter_across_workers(pytester):
@@ -207,4 +209,5 @@ def test_rate_limiter_across_workers(pytester):
         """
     )
     result = pytester.runpytest("-n", "3", "-v")
-    result.assert_outcomes(passed=4)
+    outcomes = result.parseoutcomes()
+    assert "passed" in outcomes and outcomes["passed"] == 4, str(result.stdout)

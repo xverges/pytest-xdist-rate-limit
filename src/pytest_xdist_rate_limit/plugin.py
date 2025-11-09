@@ -12,5 +12,3 @@ def pytest_configure(config: pytest.Config):
             concurrent_fixtures, name="pytest_xdist_rate_limit_fixtures"
         )
 
-
-# Made with Bob
