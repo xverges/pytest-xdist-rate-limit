@@ -1,0 +1,200 @@
+# pytest-xdist-rate-limit
+
+[![PyPI version](https://img.shields.io/pypi/v/pytest-xdist-rate-limit.svg)](https://pypi.org/project/pytest-xdist-rate-limit)
+[![Python versions](https://img.shields.io/pypi/pyversions/pytest-xdist-rate-limit.svg)](https://pypi.org/project/pytest-xdist-rate-limit)
+[![Build Status](https://github.com/xverges/pytest-xdist-rate-limit/actions/workflows/main.yml/badge.svg)](https://github.com/xverges/pytest-xdist-rate-limit/actions/workflows/main.yml)
+
+Set the rate at which pytest-xdist workers can run tests.
+
+## Features
+
+* **Call pacing**: Define how often tests hit the System Under Test.
+  **Setup flexible load testing scenarios** when used in conjunction with
+  [pytest-xdist-load-testing](https://github.com/xverges/pytest-xdist-load-testing).
+* **Rate drift detection**: Set callbacks when the test system cannot adhere to the intended rate.
+* **Shared state across workers**: Have session-scoped fixtures share state across pytest-xdist workers,
+  transparently using file-based JSON storage
+* **Setup/teardown on first/last worker**: First/last worker callbacks for setup and teardown,
+  transparently using the pattern in [Making session-scoped fixtures execute only
+  once](https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once)
+
+## Requirements
+
+* Python 3.8+
+* pytest >= 6.2.0
+* pytest-xdist >= 2.0.0
+* filelock >= 3.0.0
+
+## Installation
+
+Install directly from the GitHub repository:
+
+```bash
+pip install git+https://github.com/xverges/pytest-xdist-rate-limit.git
+```
+
+## Examples
+
+### Rate Limiting
+
+Use `rate_limiter_fixture_factory` to enforce rate limits across workers.
+
+Example using `pytest_xdist_load_testing` to run  ~80% of `test_get` and
+~20% `test_put` for 10K calls, or until we detect that we cannot keep with
+the requested rate 10 calls per second.
+
+
+```python
+import pytest
+from pytest_xdist_load_testing import stop_load_testing, weight
+from pytest_xdist_rate_limit import RateLimit
+
+@pytest.fixture(scope="session")
+def pace(request, rate_limiter_fixture_factory):
+    """Rate limiter for calls to SUT"""
+
+    def on_drift(limiter_id, current_rate, target_rate, drift):
+        msg = f"Rate drift for {limiter_id}: "
+              f"current={current_rate:.2f}/hr, target={target_rate}/hr, "
+              f"drift={drift:.2%}")
+        stop_load_testing(msg)
+
+    return rate_limiter_fixture_factory(
+        name="pacer",
+        hourly_rate=RateLimit.per_second(10),  # 10 calls/second
+        max_drift=0.2,  # 20% tolerance
+        on_drift=on_drift,
+        max_calls = 10_000
+    )
+
+@weight(80)
+def test_get(pace):
+    with pace.rate_limited_context():
+        # Context entry waits if rate limit would be exceeded
+        response = api.get("/data")
+
+@weight(20)
+def test_put(pace):
+    with pace.rate_limited_context() as ctx:
+        # Context entry waits if rate limit would be exceeded
+        response = api.put("/data/{ctx['count']}")
+```
+
+### Shared Session state
+
+```python
+import pytest
+
+@pytest.fixture(scope="session")
+def shared_resource(shared_json_fixture_factory):
+    """Shared resource with setup and teardown."""
+
+    def setup():
+        # Called by first worker only
+        # Other workers have to wait for completion
+        return {'initialized': True, 'counter': 0}
+
+    def teardown(data):
+        # Called by last worker only
+        print(f"Final counter value: {data['counter']}")
+
+    return shared_json_fixture_factory(
+        name="resource",
+        on_first_worker=setup,
+        on_last_worker=teardown
+    )
+
+def test_with_resource(shared_resource):
+    with shared_resource.locked_dict() as data:
+        data['counter'] += 1
+```
+
+## API Reference
+
+### SharedJson
+
+```python
+class SharedJson:
+    def __init__(data_file: Path, lock_file: Path, timeout: float = -1)
+    def locked_dict() -> ContextManager[Dict[str, Any]]
+    def read() -> Dict[str, Any]
+    def update(updates: Dict[str, Any]) -> None
+    @property
+    def name() -> str
+```
+
+### shared_json_fixture_factory
+
+```python
+@pytest.fixture(scope="session")
+def shared_json_fixture_factory(request, tmp_path_factory, worker_id) -> Callable
+
+# Usage:
+shared_json_fixture_factory(
+    name: str,
+    on_first_worker: Union[Dict, Callable[[], Dict]],
+    on_last_worker: Optional[Callable[[Dict], None]] = None,
+    timeout: float = -1
+) -> SharedJson
+```
+
+### rate_limiter_fixture_factory
+
+```python
+@pytest.fixture(scope="session")
+def rate_limiter_fixture_factory(shared_json_fixture_factory) -> Callable
+
+# Usage:
+rate_limiter_fixture_factory(
+    name: str,
+    hourly_rate: Union[RateLimit, Callable[[], RateLimit]],
+    max_drift: float = 0.1,
+    on_drift_callback: Optional[Callable] = None,
+    num_calls_between_checks: int = 10,
+    seconds_before_first_check: float = 60.0,
+    burst_capacity: Optional[int] = None,
+    max_calls: int = -1,
+    max_call_callback: Optional[Callable] = None
+) -> TokenBucketRateLimiter
+```
+
+### RateLimit
+
+```python
+class RateLimit:
+    @classmethod
+    def per_second(calls: Union[int, float]) -> RateLimit
+    @classmethod
+    def per_minute(calls: Union[int, float]) -> RateLimit
+    @classmethod
+    def per_hour(calls: int) -> RateLimit
+    @classmethod
+    def per_day(calls: Union[int, float]) -> RateLimit
+
+    @property
+    def calls_per_hour() -> int
+```
+
+### TokenBucketRateLimiter
+
+```python
+class TokenBucketRateLimiter:
+    def rate_limited_context() -> ContextManager[RateLimitContext]
+
+    @property
+    def id() -> str
+    @property
+    def hourly_rate() -> int
+```
+
+## License
+
+Distributed under the terms of the [MIT](https://opensource.org/licenses/MIT) license, "pytest-xdist-rate-limit" is free and open source software
+
+## Issues
+
+If you encounter any problems, please [file an issue](https://github.com/xverges/pytest-xdist-rate-limit/issues) along with a detailed description.
+
+---
+
+This [pytest](https://github.com/pytest-dev/pytest) plugin was generated with [Cookiecutter](https://github.com/audreyr/cookiecutter) along with [@hackebrot](https://github.com/hackebrot)'s [cookiecutter-pytest-plugin](https://github.com/pytest-dev/cookiecutter-pytest-plugin) template.

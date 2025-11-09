@@ -1,0 +1,15 @@
+# Ruff configuration
+line-length = 120
+
+[lint]
+# Enable flake8-style error codes
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+]
+
+[lint.per-file-ignores]
+# Allow longer lines in test files
+"tests/**/*.py" = ["E501"]

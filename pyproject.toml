@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pytest-xdist-rate-limit"
-description = "Fixtures to set rate limits on client code"
+description = "Shared state management and rate limiting for pytest-xdist workers"
 version = "0.1.0"
 readme = "README.rst"
 requires-python = ">=3.8"
@@ -36,8 +36,17 @@ classifiers = [
 ]
 dependencies = [
     "pytest>=6.2.0",
+    "pytest-xdist>=2.0.0",
+    "filelock>=3.0.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-xdist-load-testing @ git+https://github.com/xverges/pytest-xdist-load-testing.git",
+]
+
 [project.urls]
 Repository = "https://github.com/xverges/pytest-xdist-rate-limit"
+
 [project.entry-points.pytest11]
 xdist-rate-limit = "pytest_xdist_rate_limit.plugin"

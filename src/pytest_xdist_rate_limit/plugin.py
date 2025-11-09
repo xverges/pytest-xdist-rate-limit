@@ -1,19 +1,16 @@
+"""pytest-xdist-rate-limit plugin registration."""
+
 import pytest
 
 
-def pytest_addoption(parser):
-    group = parser.getgroup('xdist-rate-limit')
-    group.addoption(
-        '--foo',
-        action='store',
-        dest='dest_foo',
-        default='2025',
-        help='Set the value for the fixture "bar".'
-    )
+def pytest_configure(config: pytest.Config):
+    """Register the concurrent_fixtures module to expose its fixtures."""
+    from . import concurrent_fixtures
 
-    parser.addini('HELLO', 'Dummy pytest.ini setting')
+    if not config.pluginmanager.is_registered(concurrent_fixtures):
+        config.pluginmanager.register(
+            concurrent_fixtures, name="pytest_xdist_rate_limit_fixtures"
+        )
 
 
-@pytest.fixture
-def bar(request):
-    return request.config.option.dest_foo
+# Made with Bob
