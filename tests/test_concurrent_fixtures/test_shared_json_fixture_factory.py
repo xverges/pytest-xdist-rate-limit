@@ -3,7 +3,7 @@
 import pytest
 
 
-def test_creates_shared_json(pytester):
+def test_creates_shared_json(pytester, run_with_timeout):
     """Test that factory creates SharedJson instance."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -26,12 +26,12 @@ def test_creates_shared_json(pytester):
             assert my_shared.read() == {'test': 'value'}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_on_first_worker_dict(pytester):
+def test_on_first_worker_dict(pytester, run_with_timeout):
     """Test that on_first_worker with dict initializes data."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -51,12 +51,12 @@ def test_on_first_worker_dict(pytester):
             assert my_shared.read() == {'initialized': True, 'count': 0}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_on_first_worker_callable(pytester):
+def test_on_first_worker_callable(pytester, run_with_timeout):
     """Test that on_first_worker with callable initializes data."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -78,12 +78,12 @@ def test_on_first_worker_callable(pytester):
             assert my_shared.read() == {'initialized': True, 'count': 0}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_on_first_worker_callable_must_return_dict(pytester):
+def test_on_first_worker_callable_must_return_dict(pytester, run_with_timeout):
     """Test that on_first_worker callable must return a dict."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -107,14 +107,14 @@ def test_on_first_worker_callable_must_return_dict(pytester):
             pass
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     # Should get an error during fixture setup
     outcomes = result.parseoutcomes()
     assert "errors" in outcomes and outcomes["errors"] == 1, str(result.stdout)
     result.stdout.fnmatch_lines(["*TypeError*must return a dict*"])
 
 
-def test_on_last_worker_callback(pytester):
+def test_on_last_worker_callback(pytester, run_with_timeout):
     """Test that on_last_worker callback is actually called."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -148,7 +148,7 @@ def test_on_last_worker_callback(pytester):
             assert my_shared.read() == {{'count': 5}}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
@@ -163,7 +163,7 @@ def test_on_last_worker_callback(pytester):
     )
 
 
-def test_custom_timeout(pytester):
+def test_custom_timeout(pytester, run_with_timeout):
     """Test that custom timeout is passed to SharedJson."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -179,12 +179,12 @@ def test_custom_timeout(pytester):
             assert my_shared.timeout == 10
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_default_timeout(pytester):
+def test_default_timeout(pytester, run_with_timeout):
     """Test that default timeout is -1 (wait forever)."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -200,12 +200,12 @@ def test_default_timeout(pytester):
             assert my_shared.timeout == -1
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_shared_location(pytester):
+def test_shared_location(pytester, run_with_timeout):
     """Test that files are created in shared location."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -223,12 +223,12 @@ def test_shared_location(pytester):
             assert my_shared.data_file.parent == expected_parent
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_factory_with_xdist_workers(pytester):
+def test_factory_with_xdist_workers(pytester, run_with_timeout):
     """Test that factory works correctly with multiple xdist workers."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -258,7 +258,7 @@ def test_factory_with_xdist_workers(pytester):
                     stop_load_testing(request, f"Completed 20 runs across {len(data['workers'])} workers")
     """)
 
-    result = pytester.runpytest("--load-test", "-n", "2", "-v")
+    result = run_with_timeout(pytester, "--load-test", "-n", "2", "-v")
     result.stdout.fnmatch_lines(
         [
             "*Interrupted: Completed 20 runs across * workers*",
@@ -267,7 +267,7 @@ def test_factory_with_xdist_workers(pytester):
     assert result.ret == pytest.ExitCode.INTERRUPTED
 
 
-def test_factory_initialization_race_condition(pytester):
+def test_factory_initialization_race_condition(pytester, run_with_timeout):
     """Test that factory handles concurrent initialization correctly."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -304,7 +304,7 @@ def test_factory_initialization_race_condition(pytester):
                     stop_load_testing(request, "Verified single initialization")
     """)
 
-    result = pytester.runpytest("--load-test", "-n", "2", "-v")
+    result = run_with_timeout(pytester, "--load-test", "-n", "2", "-v")
     result.stdout.fnmatch_lines(
         [
             "*Interrupted: Verified single initialization*",
@@ -313,7 +313,7 @@ def test_factory_initialization_race_condition(pytester):
     assert result.ret == pytest.ExitCode.INTERRUPTED
 
 
-def test_timeout_on_locked_dict(pytester):
+def test_timeout_on_locked_dict(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for locked_dict."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -343,12 +343,12 @@ def test_timeout_on_locked_dict(pytester):
                     pass
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_timeout_on_read(pytester):
+def test_timeout_on_read(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for read."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -376,12 +376,12 @@ def test_timeout_on_read(pytester):
                     pass
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_timeout_on_update(pytester):
+def test_timeout_on_update(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for update."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -409,12 +409,12 @@ def test_timeout_on_update(pytester):
                     pass
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_infinite_timeout_waits(pytester):
+def test_infinite_timeout_waits(pytester, run_with_timeout):
     """Test that timeout=-1 waits indefinitely for lock."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -456,12 +456,12 @@ def test_infinite_timeout_waits(pytester):
             assert my_shared.read() == {'success': True}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_zero_timeout_fails_immediately(pytester):
+def test_zero_timeout_fails_immediately(pytester, run_with_timeout):
     """Test that timeout=0 fails immediately if lock is held."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -493,12 +493,12 @@ def test_zero_timeout_fails_immediately(pytester):
                     assert elapsed < 0.1, f"Should fail immediately, took {elapsed}s"
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_timeout_with_multiple_operations(pytester):
+def test_timeout_with_multiple_operations(pytester, run_with_timeout):
     """Test that timeout applies to each operation independently."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -533,6 +533,6 @@ def test_timeout_with_multiple_operations(pytester):
             assert my_shared.read()['count'] == 2
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)

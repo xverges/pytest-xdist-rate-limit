@@ -3,7 +3,7 @@
 import pytest
 
 
-def test_locked_dict_creates_file(pytester):
+def test_locked_dict_creates_file(pytester, run_with_timeout):
     """Test that locked_dict creates the JSON file."""
     pytester.makepyfile("""
         import json
@@ -25,12 +25,12 @@ def test_locked_dict_creates_file(pytester):
             assert content == {"count": 42}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_locked_dict_reads_existing_file(pytester):
+def test_locked_dict_reads_existing_file(pytester, run_with_timeout):
     """Test that locked_dict reads existing data."""
     pytester.makepyfile("""
         import json
@@ -54,12 +54,12 @@ def test_locked_dict_reads_existing_file(pytester):
             assert content == {"count": 15}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_locked_dict_handles_empty_file(pytester):
+def test_locked_dict_handles_empty_file(pytester, run_with_timeout):
     """Test that locked_dict handles non-existent file."""
     pytester.makepyfile("""
         import json
@@ -80,12 +80,12 @@ def test_locked_dict_handles_empty_file(pytester):
             assert content == {"new_key": "value"}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_locked_dict_supports_dict_operations(pytester):
+def test_locked_dict_supports_dict_operations(pytester, run_with_timeout):
     """Test that locked_dict supports standard dict operations."""
     pytester.makepyfile("""
         import json
@@ -119,12 +119,12 @@ def test_locked_dict_supports_dict_operations(pytester):
             }
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_read_returns_copy(pytester):
+def test_read_returns_copy(pytester, run_with_timeout):
     """Test that read() returns a snapshot."""
     pytester.makepyfile("""
         from pytest_xdist_rate_limit import SharedJson
@@ -147,12 +147,12 @@ def test_read_returns_copy(pytester):
             assert data2 == {"count": 10}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_read_empty_file(pytester):
+def test_read_empty_file(pytester, run_with_timeout):
     """Test that read() returns empty dict for non-existent file."""
     pytester.makepyfile("""
         from pytest_xdist_rate_limit import SharedJson
@@ -167,12 +167,12 @@ def test_read_empty_file(pytester):
             assert data == {}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_update_merges_data(pytester):
+def test_update_merges_data(pytester, run_with_timeout):
     """Test that update() merges new data."""
     pytester.makepyfile("""
         from pytest_xdist_rate_limit import SharedJson
@@ -193,12 +193,12 @@ def test_update_merges_data(pytester):
             assert data == {"a": 1, "b": 20, "c": 30}
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_json_serialization_types(pytester):
+def test_json_serialization_types(pytester, run_with_timeout):
     """Test that only JSON-serializable types work."""
     pytester.makepyfile("""
         from pytest_xdist_rate_limit import SharedJson
@@ -231,12 +231,12 @@ def test_json_serialization_types(pytester):
             }
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_timeout_parameter(pytester):
+def test_timeout_parameter(pytester, run_with_timeout):
     """Test that timeout parameter is respected."""
     pytester.makepyfile("""
         from pytest_xdist_rate_limit import SharedJson
@@ -254,12 +254,12 @@ def test_timeout_parameter(pytester):
             assert shared_default.timeout == -1
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_name_property_strips_prefix(pytester):
+def test_name_property_strips_prefix(pytester, run_with_timeout):
     """Test that name property returns clean name without pytest_shared_ prefix."""
     pytester.makeconftest("""
         pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
@@ -279,12 +279,12 @@ def test_name_property_strips_prefix(pytester):
             assert "pytest_shared_my_fixture" in str(my_shared.data_file)
     """)
 
-    result = pytester.runpytest("-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_concurrent_access_with_xdist(pytester):
+def test_concurrent_access_with_xdist(pytester, run_with_timeout):
     """Test that SharedJson works correctly with concurrent xdist workers."""
     pytester.makepyfile("""
         import pytest
@@ -318,7 +318,7 @@ def test_concurrent_access_with_xdist(pytester):
                     stop_load_testing(request, "Counter reached 10")
     """)
 
-    result = pytester.runpytest("--load-test", "-n", "2", "-v")
+    result = run_with_timeout(pytester, "--load-test", "-n", "2", "-v")
     result.stdout.fnmatch_lines(
         [
             "*Interrupted: Counter reached 10*",

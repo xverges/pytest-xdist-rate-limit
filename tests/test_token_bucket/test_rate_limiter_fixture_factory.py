@@ -9,7 +9,7 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
 """
 
 
-def test_rate_limiter_fixture_factory_basic(pytester):
+def test_rate_limiter_fixture_factory_basic(pytester, run_with_timeout):
     """Test basic usage of rate_limiter_fixture_factory."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -36,12 +36,12 @@ def test_rate_limiter_fixture_factory_basic(pytester):
                 assert ctx.call_count >= 1
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 2, str(result.stdout)
 
 
-def test_rate_limiter_with_load_test_and_exit_callback(pytester):
+def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeout):
     """Test rate limiter with --load-test and exit callback on drift."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -88,12 +88,12 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester):
         """
     )
     # Run with load test - should exit due to drift
-    result = pytester.runpytest("--load-test", "-n", "2", "-v", "--load-duration", "5")
+    result = run_with_timeout(pytester, "--load-test", "-n", "2", "-v")
     # The test should exit early due to drift detection
     assert result.ret != 0 or "Rate drift detected" in result.stdout.str()
 
 
-def test_rate_limiter_with_max_calls_callback(pytester):
+def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
     """Test rate limiter with max_calls callback."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -127,12 +127,12 @@ def test_rate_limiter_with_max_calls_callback(pytester):
                 pass
         """
     )
-    result = pytester.runpytest("--load-test", "-n", "2", "-v", "--load-duration", "5")
+    result = run_with_timeout(pytester, "--load-test", "-n", "2", "-v")
     # Should exit after 3 calls
     assert "Max calls reached: 3" in result.stdout.str() or result.ret != 0
 
 
-def test_rate_limiter_dynamic_rate(pytester):
+def test_rate_limiter_dynamic_rate(pytester, run_with_timeout):
     """Test rate limiter with dynamic rate function."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -166,12 +166,12 @@ def test_rate_limiter_dynamic_rate(pytester):
                 assert ctx.hourly_rate == 7200
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 2, str(result.stdout)
 
 
-def test_rate_limiter_across_workers(pytester):
+def test_rate_limiter_across_workers(pytester, run_with_timeout):
     """Test that rate limiter state is shared across workers."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -208,6 +208,6 @@ def test_rate_limiter_across_workers(pytester):
                 assert call_count >= 1
         """
     )
-    result = pytester.runpytest("-n", "3", "-v")
+    result = run_with_timeout(pytester, "-n", "3", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 4, str(result.stdout)

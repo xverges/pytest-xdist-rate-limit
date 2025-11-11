@@ -9,7 +9,7 @@ import json
 import logging
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, Optional, Set, Union
 
 import pytest
 from filelock import FileLock
@@ -66,14 +66,14 @@ class SharedJson:
         return stem
 
     @contextmanager
-    def locked_dict(self):
+    def locked_dict(self) -> Generator[Dict[str, Any], None, None]:
         """Context manager for atomic read-modify-write operations.
 
         Yields a dict that can be modified in-place. All changes are written
         back to the file atomically when the context exits.
 
         Yields:
-            dict: The current data from the JSON file (modifiable)
+            Dict[str, Any]: The current data from the JSON file (modifiable)
 
         Raises:
             filelock.Timeout: If lock cannot be acquired within timeout period
@@ -136,7 +136,11 @@ class SharedJson:
 
 
 @pytest.fixture(scope="session")
-def shared_json_fixture_factory(request, tmp_path_factory, worker_id):
+def shared_json_fixture_factory(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+    worker_id: str,
+) -> Generator[Callable[..., SharedJson], None, None]:
     """Factory for creating shared JSON fixtures across pytest-xdist workers.
 
     This is a session-scoped fixture that returns a factory function for creating
@@ -148,7 +152,7 @@ def shared_json_fixture_factory(request, tmp_path_factory, worker_id):
         worker_id: The xdist worker ID (e.g., 'gw0', 'gw1', or 'master')
 
     Returns:
-        Callable: Factory function that creates SharedJson instances
+        Callable[..., SharedJson]: Factory function that creates SharedJson instances
 
     Example:
         @pytest.fixture(scope="session")
