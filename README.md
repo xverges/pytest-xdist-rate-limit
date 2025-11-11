@@ -27,13 +27,13 @@ Set the rate at which pytest-xdist workers can run tests.
 
 ## Installation
 
-Install directly from the GitHub repository:
-
 ```bash
 pip install git+https://github.com/xverges/pytest-xdist-rate-limit.git
 ```
 
 ## Examples
+
+See the [`examples/`](examples/) folder for complete working examples.
 
 ### Rate Limiting
 
@@ -109,83 +109,11 @@ def test_with_resource(shared_resource):
         data['counter'] += 1
 ```
 
-## API Reference
+## Documentation
 
-### SharedJson
+📚 **[Full Documentation](https://xverges.github.io/pytest-xdist-rate-limit/)**
 
-```python
-class SharedJson:
-    def __init__(data_file: Path, lock_file: Path, timeout: float = -1)
-    def locked_dict() -> ContextManager[Dict[str, Any]]
-    def read() -> Dict[str, Any]
-    def update(updates: Dict[str, Any]) -> None
-    @property
-    def name() -> str
-```
-
-### shared_json_fixture_factory
-
-```python
-@pytest.fixture(scope="session")
-def shared_json_fixture_factory(request, tmp_path_factory, worker_id) -> Callable
-
-# Usage:
-shared_json_fixture_factory(
-    name: str,
-    on_first_worker: Union[Dict, Callable[[], Dict]],
-    on_last_worker: Optional[Callable[[Dict], None]] = None,
-    timeout: float = -1
-) -> SharedJson
-```
-
-### rate_limiter_fixture_factory
-
-```python
-@pytest.fixture(scope="session")
-def rate_limiter_fixture_factory(shared_json_fixture_factory) -> Callable
-
-# Usage:
-rate_limiter_fixture_factory(
-    name: str,
-    hourly_rate: Union[RateLimit, Callable[[], RateLimit]],
-    max_drift: float = 0.1,
-    on_drift_callback: Optional[Callable] = None,
-    num_calls_between_checks: int = 10,
-    seconds_before_first_check: float = 60.0,
-    burst_capacity: Optional[int] = None,
-    max_calls: int = -1,
-    max_call_callback: Optional[Callable] = None
-) -> TokenBucketRateLimiter
-```
-
-### RateLimit
-
-```python
-class RateLimit:
-    @classmethod
-    def per_second(calls: Union[int, float]) -> RateLimit
-    @classmethod
-    def per_minute(calls: Union[int, float]) -> RateLimit
-    @classmethod
-    def per_hour(calls: int) -> RateLimit
-    @classmethod
-    def per_day(calls: Union[int, float]) -> RateLimit
-
-    @property
-    def calls_per_hour() -> int
-```
-
-### TokenBucketRateLimiter
-
-```python
-class TokenBucketRateLimiter:
-    def rate_limited_context() -> ContextManager[RateLimitContext]
-
-    @property
-    def id() -> str
-    @property
-    def hourly_rate() -> int
-```
+* [API Reference](https://xverges.github.io/pytest-xdist-rate-limit/api/reference/) - Complete API documentation
 
 ## License
 

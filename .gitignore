@@ -72,3 +72,5 @@ target/
 # pyenv
 .python-version
 
+# MkDocs - keep docs/index.md in sync with README.md
+docs/index.md
