@@ -1,0 +1,73 @@
+# API Reference
+
+This documentation is automatically generated from the source code docstrings, ensuring it always matches the actual implementation.
+
+## Core Classes
+
+### SharedJson
+
+::: pytest_xdist_rate_limit.concurrent_fixtures.SharedJson
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - __init__
+        - locked_dict
+        - read
+        - update
+        - name
+
+### RateLimit
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.RateLimit
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - __init__
+        - per_second
+        - per_minute
+        - per_hour
+        - per_day
+        - calls_per_hour
+
+### TokenBucketRateLimiter
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.TokenBucketRateLimiter
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - __init__
+        - rate_limited_context
+        - id
+        - hourly_rate
+
+#### RateLimitContext
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.TokenBucketRateLimiter.RateLimitContext
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - id
+        - hourly_rate
+        - call_count
+        - exceptions
+        - start_time
+
+## Fixture Factories
+
+### shared_json_fixture_factory
+
+::: pytest_xdist_rate_limit.concurrent_fixtures.shared_json_fixture_factory
+    options:
+      show_root_heading: true
+      show_source: false
+
+### rate_limiter_fixture_factory
+
+::: pytest_xdist_rate_limit.concurrent_fixtures.rate_limiter_fixture_factory
+    options:
+      show_root_heading: true
+      show_source: false
