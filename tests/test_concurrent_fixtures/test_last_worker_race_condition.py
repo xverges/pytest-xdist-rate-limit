@@ -3,7 +3,7 @@
 import pytest
 
 
-def test_last_worker_callback_runs_exactly_once(pytester):
+def test_last_worker_callback_runs_exactly_once(pytester, run_with_timeout):
     """Test that on_last_worker callback runs exactly once, not multiple times.
 
     This test exposes the race condition where multiple workers could
@@ -59,10 +59,10 @@ def test_last_worker_callback_runs_exactly_once(pytester):
     """)
 
     # Run with multiple workers to trigger race condition
-    result = pytester.runpytest("--load-test", "-n", "4", "-v")
+    result = run_with_timeout(pytester, "--load-test", "-n", "4", "-v")
 
     # Test should complete
-    assert result.ret == pytest.ExitCode.INTERRUPTED
+    assert result.ret == pytest.ExitCode.INTERRUPTED, f"stderr: {result.stderr}"
 
     # The critical assertion: callback should have run exactly once
     assert counter_file.exists(), "Callback was never executed"
@@ -77,7 +77,7 @@ def test_last_worker_callback_runs_exactly_once(pytester):
     )
 
 
-def test_last_worker_detection_with_delayed_workers(pytester):
+def test_last_worker_detection_with_delayed_workers(pytester, run_with_timeout):
     """Test last worker detection when workers finish at different times.
 
     This test creates a scenario where workers finish their teardown
@@ -130,7 +130,7 @@ def test_last_worker_detection_with_delayed_workers(pytester):
                     stop_load_testing(request, "Test complete")
     """)
 
-    result = pytester.runpytest("--load-test", "-n", "3", "-v")
+    result = run_with_timeout(pytester, "--load-test", "-n", "3", "-v")
     assert result.ret == pytest.ExitCode.INTERRUPTED
 
     # Check how many times the callback was executed
@@ -147,7 +147,7 @@ def test_last_worker_detection_with_delayed_workers(pytester):
     )
 
 
-def test_race_condition_with_exact_worker_count(pytester):
+def test_race_condition_with_exact_worker_count(pytester, run_with_timeout):
     """Test that verifies the >= vs == issue in last worker detection.
 
     The current code uses >= which allows multiple workers to pass
@@ -195,7 +195,7 @@ def test_race_condition_with_exact_worker_count(pytester):
     """)
 
     # Use exactly 3 workers
-    result = pytester.runpytest("--load-test", "-n", "3", "-v")
+    result = run_with_timeout(pytester, "--load-test", "-n", "3", "-v")
     assert result.ret == pytest.ExitCode.INTERRUPTED
 
     # Verify callback ran exactly once

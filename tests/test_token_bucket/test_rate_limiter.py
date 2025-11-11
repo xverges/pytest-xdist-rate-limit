@@ -9,7 +9,7 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
 """
 
 
-def test_basic_rate_limiting(pytester):
+def test_basic_rate_limiting(pytester, run_with_timeout):
     """Test basic rate limiting functionality."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -46,12 +46,12 @@ def test_basic_rate_limiting(pytester):
             assert elapsed >= 0.9, f"Should wait ~1s, took {elapsed}s"
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_hourly_rate_function(pytester):
+def test_hourly_rate_function(pytester, run_with_timeout):
     """Test rate limiter with dynamic hourly rate."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -87,12 +87,12 @@ def test_hourly_rate_function(pytester):
             assert limiter.hourly_rate == 7200
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_exception_tracking(pytester):
+def test_exception_tracking(pytester, run_with_timeout):
     """Test that exceptions are tracked."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -127,12 +127,12 @@ def test_exception_tracking(pytester):
                 assert ctx.exceptions == 1
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_max_calls_limit(pytester):
+def test_max_calls_limit(pytester, run_with_timeout):
     """Test max_calls limit and callback."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -169,12 +169,12 @@ def test_max_calls_limit(pytester):
             assert callback_data[0] == ("max_calls_test", 3)
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_rate_drift_detection(pytester):
+def test_rate_drift_detection(pytester, run_with_timeout):
     """Test rate drift detection and callback."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -228,12 +228,12 @@ def test_rate_drift_detection(pytester):
             assert drift_data[0]['drift'] > 0.5
         """
     )
-    result = pytester.runpytest("-n", "2", "-v", "-s")
+    result = run_with_timeout(pytester, "-n", "2", "-v", "-s")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_context_properties(pytester):
+def test_context_properties(pytester, run_with_timeout):
     """Test RateLimitContext properties."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -297,12 +297,12 @@ def test_context_properties(pytester):
                 assert ctx.call_count == 2
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 2, str(result.stdout)
 
 
-def test_concurrent_workers(pytester):
+def test_concurrent_workers(pytester, run_with_timeout):
     """Test rate limiter across multiple xdist workers."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -336,12 +336,12 @@ def test_concurrent_workers(pytester):
                 assert ctx.call_count >= 1
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 3, str(result.stdout)
 
 
-def test_burst_capacity_default(pytester):
+def test_burst_capacity_default(pytester, run_with_timeout):
     """Test default burst capacity calculation."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
@@ -380,6 +380,6 @@ def test_burst_capacity_default(pytester):
             assert limiter2.burst_capacity == 1
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)

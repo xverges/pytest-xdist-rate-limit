@@ -74,7 +74,7 @@ def test_rate_limit_repr():
     assert repr(rate) == "RateLimit(36000 calls/hour)"
 
 
-def test_rate_limit_with_token_bucket(pytester):
+def test_rate_limit_with_token_bucket(pytester, run_with_timeout):
     """Test using RateLimit with TokenBucketRateLimiter."""
     pytester.makeconftest("""
 import pytest
@@ -109,12 +109,12 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
                 assert ctx.call_count == 1
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
-def test_rate_limit_callable_with_token_bucket(pytester):
+def test_rate_limit_callable_with_token_bucket(pytester, run_with_timeout):
     """Test using callable RateLimit with TokenBucketRateLimiter."""
     pytester.makeconftest("""
 import pytest
@@ -155,6 +155,6 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
             assert limiter.hourly_rate == 7200
         """
     )
-    result = pytester.runpytest("-n", "2", "-v")
+    result = run_with_timeout(pytester, "-n", "2", "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
