@@ -27,6 +27,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install -e .
           pip install mkdocs mkdocs-material mkdocstrings[python]
 
       - name: Sync README to docs
