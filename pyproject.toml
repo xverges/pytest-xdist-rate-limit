@@ -8,8 +8,8 @@ build-backend = "setuptools.build_meta"
 name = "pytest-xdist-rate-limit"
 description = "Shared state management and rate limiting for pytest-xdist workers"
 version = "0.1.0"
-readme = "README.rst"
-requires-python = ">=3.8"
+readme = "README.md"
+requires-python = ">=3.9"
 authors = [
     { name = "Xavier Vergés", email = "github@verg.es" },
 ]
@@ -24,7 +24,6 @@ classifiers = [
     "Topic :: Software Development :: Testing",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
