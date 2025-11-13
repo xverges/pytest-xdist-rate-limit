@@ -262,7 +262,7 @@ def test_timeout_parameter(pytester, run_with_timeout):
 def test_name_property_strips_prefix(pytester, run_with_timeout):
     """Test that name property returns clean name without pytest_shared_ prefix."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest

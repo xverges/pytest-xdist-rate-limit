@@ -40,5 +40,3 @@ markdown_extensions:
 nav:
   - Home: index.md
   - API Reference: api/reference.md
-
-# Made with Bob

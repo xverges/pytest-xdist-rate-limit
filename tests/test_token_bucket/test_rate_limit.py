@@ -80,7 +80,7 @@ def test_rate_limit_with_token_bucket(pytester, run_with_timeout):
 import pytest
 from pytest_xdist_rate_limit import make_shared_json
 
-pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
 """)
     pytester.makepyfile(
         """
@@ -120,7 +120,7 @@ def test_rate_limit_callable_with_token_bucket(pytester, run_with_timeout):
 import pytest
 from pytest_xdist_rate_limit import make_shared_json
 
-pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
 """)
     pytester.makepyfile(
         """

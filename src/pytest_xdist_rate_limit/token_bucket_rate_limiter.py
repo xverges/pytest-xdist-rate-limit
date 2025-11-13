@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generator, Optional, Tuple, Union
 
-from pytest_xdist_rate_limit.concurrent_fixtures import SharedJson
+from pytest_xdist_rate_limit.shared_json import SharedJson
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

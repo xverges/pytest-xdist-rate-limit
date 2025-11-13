@@ -6,7 +6,7 @@ import pytest
 def test_creates_shared_json(pytester, run_with_timeout):
     """Test that factory creates SharedJson instance."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -34,7 +34,7 @@ def test_creates_shared_json(pytester, run_with_timeout):
 def test_on_first_worker_dict(pytester, run_with_timeout):
     """Test that on_first_worker with dict initializes data."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -59,7 +59,7 @@ def test_on_first_worker_dict(pytester, run_with_timeout):
 def test_on_first_worker_callable(pytester, run_with_timeout):
     """Test that on_first_worker with callable initializes data."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -86,7 +86,7 @@ def test_on_first_worker_callable(pytester, run_with_timeout):
 def test_on_first_worker_callable_must_return_dict(pytester, run_with_timeout):
     """Test that on_first_worker callable must return a dict."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -117,7 +117,7 @@ def test_on_first_worker_callable_must_return_dict(pytester, run_with_timeout):
 def test_on_last_worker_callback(pytester, run_with_timeout):
     """Test that on_last_worker callback is actually called."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     # Create a marker file path that will be accessible from both test and verification
@@ -166,7 +166,7 @@ def test_on_last_worker_callback(pytester, run_with_timeout):
 def test_custom_timeout(pytester, run_with_timeout):
     """Test that custom timeout is passed to SharedJson."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -187,7 +187,7 @@ def test_custom_timeout(pytester, run_with_timeout):
 def test_default_timeout(pytester, run_with_timeout):
     """Test that default timeout is -1 (wait forever)."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -208,7 +208,7 @@ def test_default_timeout(pytester, run_with_timeout):
 def test_shared_location(pytester, run_with_timeout):
     """Test that files are created in shared location."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -231,7 +231,7 @@ def test_shared_location(pytester, run_with_timeout):
 def test_factory_with_xdist_workers(pytester, run_with_timeout):
     """Test that factory works correctly with multiple xdist workers."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -270,7 +270,7 @@ def test_factory_with_xdist_workers(pytester, run_with_timeout):
 def test_factory_initialization_race_condition(pytester, run_with_timeout):
     """Test that factory handles concurrent initialization correctly."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -316,7 +316,7 @@ def test_factory_initialization_race_condition(pytester, run_with_timeout):
 def test_timeout_on_locked_dict(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for locked_dict."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -351,7 +351,7 @@ def test_timeout_on_locked_dict(pytester, run_with_timeout):
 def test_timeout_on_read(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for read."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -384,7 +384,7 @@ def test_timeout_on_read(pytester, run_with_timeout):
 def test_timeout_on_update(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for update."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -417,7 +417,7 @@ def test_timeout_on_update(pytester, run_with_timeout):
 def test_infinite_timeout_waits(pytester, run_with_timeout):
     """Test that timeout=-1 waits indefinitely for lock."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -464,7 +464,7 @@ def test_infinite_timeout_waits(pytester, run_with_timeout):
 def test_zero_timeout_fails_immediately(pytester, run_with_timeout):
     """Test that timeout=0 fails immediately if lock is held."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -501,7 +501,7 @@ def test_zero_timeout_fails_immediately(pytester, run_with_timeout):
 def test_timeout_with_multiple_operations(pytester, run_with_timeout):
     """Test that timeout applies to each operation independently."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest

@@ -11,7 +11,7 @@ def test_last_worker_callback_runs_exactly_once(pytester, run_with_timeout):
     instead of == check, combined with the read-modify-write race.
     """
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     # Create a counter file that will track callback executions
@@ -85,7 +85,7 @@ def test_last_worker_detection_with_delayed_workers(pytester, run_with_timeout):
     the race condition.
     """
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     execution_log = pytester.path / "execution_log.txt"
@@ -155,7 +155,7 @@ def test_race_condition_with_exact_worker_count(pytester, run_with_timeout):
     read-modify-write sequence.
     """
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     callback_marker = pytester.path / "callback_executions.txt"

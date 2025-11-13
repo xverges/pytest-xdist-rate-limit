@@ -5,7 +5,7 @@ CONFTEST_CONTENT = """
 import pytest
 from pytest_xdist_rate_limit import make_rate_limiter
 
-pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+pytest_plugins = ['pytest_xdist_rate_limit.shared_json', 'pytest_xdist_rate_limit.rate_limiter_fixture']
 """
 
 
