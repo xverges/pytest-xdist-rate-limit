@@ -4,11 +4,11 @@ Example: Rate limiting with automatic drift detection
 Run with: pytest --tb=no -n 2 --load-test examples/test_rate_limiter_example.py
 
 This demonstrates:
-1. Using rate_limiter_fixture_factory to make calls at a specific rate
+1. Using make_rate_limiter to make calls at a specific rate
 2. Automatic rate drift detection across workers
 3. Session exit when rate limits are violated
 4. Shared state tracking for rate limiting
-5. How entering rate_limited_context causes waiting when rate limit is reached
+5. How entering the rate limiter context causes waiting when rate limit is reached
 
 TEST_CODE:
 ```python
@@ -48,7 +48,7 @@ class SystemUnderTest:
 
 
 @pytest.fixture(scope="session")
-def fast_service_to_stress(rate_limiter_fixture_factory, request):
+def pacer(make_rate_limiter, request):
     """Rate limiter that exits session if rate drift exceeds 20%."""
 
     def on_drift(limiter_id, current_rate, target_rate, drift):
@@ -60,7 +60,7 @@ def fast_service_to_stress(rate_limiter_fixture_factory, request):
         )
         stop_load_testing(request, message)
 
-    return rate_limiter_fixture_factory(
+    return make_rate_limiter(
         name="fast_service",
         hourly_rate=RateLimit.per_second(1000),  # 10 calls per second
         burst_capacity=20,  # Allow bursts up to 20 calls
@@ -72,9 +72,9 @@ def fast_service_to_stress(rate_limiter_fixture_factory, request):
 
 
 @pytest.fixture(scope="session")
-def slow_service_to_stress(rate_limiter_fixture_factory):
+def throttle(make_rate_limiter):
     """Rate limiter with very low rate to demonstrate waiting behavior."""
-    return rate_limiter_fixture_factory(
+    return make_rate_limiter(
         name="slow_service",
         hourly_rate=RateLimit.per_second(1),
         burst_capacity=1,
@@ -95,9 +95,9 @@ def should_pass():
 
 
 @weight(80)
-def test_api_read(fast_service_to_stress, should_pass):
+def test_api_read(pacer, should_pass):
     """60% - Simulates read API calls with rate limiting."""
-    with fast_service_to_stress.rate_limited_context() as progress:
+    with pacer() as progress:
         SystemUnderTest.read()
         assert progress.call_count >= 1
         assert progress.id == "fast_service"
@@ -106,9 +106,9 @@ def test_api_read(fast_service_to_stress, should_pass):
 
 
 @weight(5)
-def test_api_write(fast_service_to_stress, should_pass):
+def test_api_write(pacer, should_pass):
     """15% - Simulates write API calls with rate limiting."""
-    with fast_service_to_stress.rate_limited_context() as progress:
+    with pacer() as progress:
         SystemUnderTest.write()
         assert progress.call_count >= 1
         assert progress.hourly_rate == 3600000
@@ -117,9 +117,9 @@ def test_api_write(fast_service_to_stress, should_pass):
 
 
 @weight(5)
-def test_api_delete(fast_service_to_stress, should_pass):
+def test_api_delete(pacer, should_pass):
     """5% - Simulates delete API calls with rate limiting."""
-    with fast_service_to_stress.rate_limited_context() as progress:
+    with pacer() as progress:
         SystemUnderTest.delete()
         assert progress.call_count >= 1
         assert progress.exceptions == 0
@@ -128,9 +128,9 @@ def test_api_delete(fast_service_to_stress, should_pass):
 
 
 @weight(10)
-def test_slow_api_demonstrates_waiting(slow_service_to_stress):
-    """Demonstrates how entering rate_limited_context causes waiting when tokens are exhausted."""
-    with slow_service_to_stress.rate_limited_context() as progress:
+def test_slow_api_demonstrates_waiting(throttle):
+    """Demonstrates how entering the rate limiter context causes waiting when tokens are exhausted."""
+    with throttle() as progress:
         # Verify rate limiting: with 1 call/second rate, we shouldn't have more calls
         # than the elapsed time (in seconds) plus one (for burst capacity)
         elapsed_seconds = time.time() - progress.start_time

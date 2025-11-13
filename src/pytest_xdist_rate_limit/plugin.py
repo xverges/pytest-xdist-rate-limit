@@ -4,11 +4,16 @@ import pytest
 
 
 def pytest_configure(config: pytest.Config):
-    """Register the concurrent_fixtures module to expose its fixtures."""
-    from . import concurrent_fixtures
+    """Register the fixture modules to expose their fixtures."""
+    from . import rate_limiter_fixture, shared_json
 
-    if not config.pluginmanager.is_registered(concurrent_fixtures):
+    if not config.pluginmanager.is_registered(shared_json):
         config.pluginmanager.register(
-            concurrent_fixtures, name="pytest_xdist_rate_limit_fixtures"
+            shared_json, name="pytest_xdist_rate_limit_shared_json"
+        )
+
+    if not config.pluginmanager.is_registered(rate_limiter_fixture):
+        config.pluginmanager.register(
+            rate_limiter_fixture, name="pytest_xdist_rate_limit_rate_limiter"
         )
 

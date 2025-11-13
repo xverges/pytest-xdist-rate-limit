@@ -11,7 +11,7 @@ def test_last_worker_callback_runs_exactly_once(pytester, run_with_timeout):
     instead of == check, combined with the read-modify-write race.
     """
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     # Create a counter file that will track callback executions
@@ -24,7 +24,7 @@ def test_last_worker_callback_runs_exactly_once(pytester, run_with_timeout):
         from pytest_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
-        def shared_counter(shared_json_fixture_factory):
+        def shared_counter(make_shared_json):
             counter_file = Path(r"{counter_file}")
 
             def on_last_worker_callback(shared):
@@ -41,7 +41,7 @@ def test_last_worker_callback_runs_exactly_once(pytester, run_with_timeout):
                 # Add a small delay to increase chance of race condition
                 time.sleep(0.1)
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "race_test",
                 on_first_worker={{'test_count': 0, 'callback_count': 0}},
                 on_last_worker=on_last_worker_callback
@@ -85,7 +85,7 @@ def test_last_worker_detection_with_delayed_workers(pytester, run_with_timeout):
     the race condition.
     """
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     execution_log = pytester.path / "execution_log.txt"
@@ -97,7 +97,7 @@ def test_last_worker_detection_with_delayed_workers(pytester, run_with_timeout):
         from pytest_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
-        def delayed_fixture(shared_json_fixture_factory, worker_id):
+        def delayed_fixture(make_shared_json, worker_id):
             log_file = Path(r"{execution_log}")
 
             def log_callback(shared):
@@ -111,7 +111,7 @@ def test_last_worker_detection_with_delayed_workers(pytester, run_with_timeout):
                 else:
                     log_file.write_text(log_entry)
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "delayed_test",
                 on_first_worker={{'runs': 0}},
                 on_last_worker=log_callback
@@ -155,7 +155,7 @@ def test_race_condition_with_exact_worker_count(pytester, run_with_timeout):
     read-modify-write sequence.
     """
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     callback_marker = pytester.path / "callback_executions.txt"
@@ -166,7 +166,7 @@ def test_race_condition_with_exact_worker_count(pytester, run_with_timeout):
         from pytest_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
-        def exact_count_fixture(shared_json_fixture_factory):
+        def exact_count_fixture(make_shared_json):
             marker = Path(r"{callback_marker}")
 
             def count_callback(shared):
@@ -179,7 +179,7 @@ def test_race_condition_with_exact_worker_count(pytester, run_with_timeout):
                 # (this write is safe because only one worker should call this)
                 marker.write_text(str(data['callback_count']))
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "exact_count",
                 on_first_worker={{'counter': 0, 'callback_count': 0}},
                 on_last_worker=count_callback

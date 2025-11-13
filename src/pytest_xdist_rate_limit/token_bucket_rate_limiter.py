@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generator, Optional, Tuple, Union
 
-from pytest_xdist_rate_limit.concurrent_fixtures import SharedJson
+from pytest_xdist_rate_limit.shared_json import SharedJson
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -64,6 +64,13 @@ class TokenBucketRateLimiter:
     This class implements the token bucket algorithm, a classical rate limiting
     algorithm that allows for controlled bursts of activity. It is designed to be
     used with pytest-xdist to coordinate rate limiting across multiple worker processes.
+
+    The limiter can be used as a callable context manager:
+
+    Example:
+        with pacer() as ctx:
+            print(f"Using rate limiter {ctx.id} with rate {ctx.hourly_rate}/hr")
+            perform_action()
     """
 
     def __init__(
@@ -303,6 +310,24 @@ class TokenBucketRateLimiter:
         def start_time(self) -> float:
             """Timestamp of when the first call was made (Unix timestamp)."""
             return self._state["start_time"]
+
+    def __call__(self):
+        """
+        Make the rate limiter callable as a context manager.
+
+        This allows using the rate limiter with cleaner syntax:
+            with pacer():
+                ...
+
+        Returns:
+            Context manager for rate limiting
+
+        Example:
+            with pacer() as ctx:
+                print(f"Call count: {ctx.call_count}")
+                perform_action()
+        """
+        return self.rate_limited_context()
 
     @contextlib.contextmanager
     def rate_limited_context(self) -> Generator[RateLimitContext, Any, None]:

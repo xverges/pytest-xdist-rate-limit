@@ -58,16 +58,16 @@ This documentation is automatically generated from the source code docstrings, e
 
 ## Fixture Factories
 
-### shared_json_fixture_factory
+### make_shared_json
 
-::: pytest_xdist_rate_limit.concurrent_fixtures.shared_json_fixture_factory
+::: pytest_xdist_rate_limit.concurrent_fixtures.make_shared_json
     options:
       show_root_heading: true
       show_source: false
 
-### rate_limiter_fixture_factory
+### make_rate_limiter
 
-::: pytest_xdist_rate_limit.concurrent_fixtures.rate_limiter_fixture_factory
+::: pytest_xdist_rate_limit.concurrent_fixtures.make_rate_limiter
     options:
       show_root_heading: true
       show_source: false

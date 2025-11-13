@@ -1,4 +1,4 @@
-"""Tests for shared_json_fixture_factory using pytester."""
+"""Tests for make_shared_json using pytester."""
 
 import pytest
 
@@ -6,15 +6,15 @@ import pytest
 def test_creates_shared_json(pytester, run_with_timeout):
     """Test that factory creates SharedJson instance."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
         from pytest_xdist_rate_limit import SharedJson
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test")
+        def my_shared(make_shared_json):
+            return make_shared_json("test")
 
         def test_factory_creates_instance(my_shared):
             assert isinstance(my_shared, SharedJson)
@@ -34,15 +34,15 @@ def test_creates_shared_json(pytester, run_with_timeout):
 def test_on_first_worker_dict(pytester, run_with_timeout):
     """Test that on_first_worker with dict initializes data."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
+        def my_shared(make_shared_json):
             initial_data = {'initialized': True, 'count': 0}
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "test_init_dict",
                 on_first_worker=initial_data
             )
@@ -59,17 +59,17 @@ def test_on_first_worker_dict(pytester, run_with_timeout):
 def test_on_first_worker_callable(pytester, run_with_timeout):
     """Test that on_first_worker with callable initializes data."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
+        def my_shared(make_shared_json):
             def init():
                 return {'initialized': True, 'count': 0}
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "test_init_callable",
                 on_first_worker=init
             )
@@ -86,18 +86,18 @@ def test_on_first_worker_callable(pytester, run_with_timeout):
 def test_on_first_worker_callable_must_return_dict(pytester, run_with_timeout):
     """Test that on_first_worker callable must return a dict."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
+        def my_shared(make_shared_json):
             def bad_init():
                 return "not a dict"
 
             # This should raise TypeError
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "test_bad_init",
                 on_first_worker=bad_init
             )
@@ -117,7 +117,7 @@ def test_on_first_worker_callable_must_return_dict(pytester, run_with_timeout):
 def test_on_last_worker_callback(pytester, run_with_timeout):
     """Test that on_last_worker callback is actually called."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
 
     # Create a marker file path that will be accessible from both test and verification
@@ -128,7 +128,7 @@ def test_on_last_worker_callback(pytester, run_with_timeout):
         from pathlib import Path
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
+        def my_shared(make_shared_json):
             marker_file = Path(r"{marker_file}")
 
             def finalize(shared):
@@ -136,7 +136,7 @@ def test_on_last_worker_callback(pytester, run_with_timeout):
                 data = shared.read()
                 marker_file.write_text(f"callback_executed:count={{data.get('count', 0)}}")
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "test_final",
                 on_first_worker={{'count': 0}},
                 on_last_worker=finalize
@@ -166,14 +166,14 @@ def test_on_last_worker_callback(pytester, run_with_timeout):
 def test_custom_timeout(pytester, run_with_timeout):
     """Test that custom timeout is passed to SharedJson."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_timeout", timeout=10)
+        def my_shared(make_shared_json):
+            return make_shared_json("test_timeout", timeout=10)
 
         def test_timeout(my_shared):
             assert my_shared.timeout == 10
@@ -187,14 +187,14 @@ def test_custom_timeout(pytester, run_with_timeout):
 def test_default_timeout(pytester, run_with_timeout):
     """Test that default timeout is -1 (wait forever)."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_default_timeout")
+        def my_shared(make_shared_json):
+            return make_shared_json("test_default_timeout")
 
         def test_default_timeout(my_shared):
             assert my_shared.timeout == -1
@@ -208,14 +208,14 @@ def test_default_timeout(pytester, run_with_timeout):
 def test_shared_location(pytester, run_with_timeout):
     """Test that files are created in shared location."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_location")
+        def my_shared(make_shared_json):
+            return make_shared_json("test_location")
 
         def test_location(my_shared, tmp_path_factory):
             # Files should be in parent of worker-specific temp dirs
@@ -231,15 +231,15 @@ def test_shared_location(pytester, run_with_timeout):
 def test_factory_with_xdist_workers(pytester, run_with_timeout):
     """Test that factory works correctly with multiple xdist workers."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
         from pytest_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
-        def shared_data(shared_json_fixture_factory):
-            return shared_json_fixture_factory(
+        def shared_data(make_shared_json):
+            return make_shared_json(
                 "worker_data",
                 on_first_worker={'workers': [], 'count': 0}
             )
@@ -270,19 +270,19 @@ def test_factory_with_xdist_workers(pytester, run_with_timeout):
 def test_factory_initialization_race_condition(pytester, run_with_timeout):
     """Test that factory handles concurrent initialization correctly."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
         from pytest_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
-        def shared_init(shared_json_fixture_factory):
+        def shared_init(make_shared_json):
             def initialize():
                 # This should only run once despite multiple workers
                 return {'initialized': True, 'init_count': 1}
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 "init_test",
                 on_first_worker=initialize
             )
@@ -316,7 +316,7 @@ def test_factory_initialization_race_condition(pytester, run_with_timeout):
 def test_timeout_on_locked_dict(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for locked_dict."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -324,8 +324,8 @@ def test_timeout_on_locked_dict(pytester, run_with_timeout):
         from filelock import Timeout as FileLockTimeout
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_timeout_locked", timeout=0.1)
+        def my_shared(make_shared_json):
+            return make_shared_json("test_timeout_locked", timeout=0.1)
 
         def test_timeout_locked_dict(my_shared, tmp_path):
             # Manually acquire the lock to simulate contention
@@ -351,15 +351,15 @@ def test_timeout_on_locked_dict(pytester, run_with_timeout):
 def test_timeout_on_read(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for read."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
         from filelock import Timeout as FileLockTimeout
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_timeout_read", timeout=0.1)
+        def my_shared(make_shared_json):
+            return make_shared_json("test_timeout_read", timeout=0.1)
 
         def test_timeout_read(my_shared):
             # Manually acquire the lock to simulate contention
@@ -384,15 +384,15 @@ def test_timeout_on_read(pytester, run_with_timeout):
 def test_timeout_on_update(pytester, run_with_timeout):
     """Test that timeout is respected when acquiring lock for update."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
         from filelock import Timeout as FileLockTimeout
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_timeout_update", timeout=0.1)
+        def my_shared(make_shared_json):
+            return make_shared_json("test_timeout_update", timeout=0.1)
 
         def test_timeout_update(my_shared):
             # Manually acquire the lock to simulate contention
@@ -417,7 +417,7 @@ def test_timeout_on_update(pytester, run_with_timeout):
 def test_infinite_timeout_waits(pytester, run_with_timeout):
     """Test that timeout=-1 waits indefinitely for lock."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -425,8 +425,8 @@ def test_infinite_timeout_waits(pytester, run_with_timeout):
         import time
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_infinite_timeout", timeout=-1)
+        def my_shared(make_shared_json):
+            return make_shared_json("test_infinite_timeout", timeout=-1)
 
         def test_infinite_timeout(my_shared):
             # Acquire lock in background thread and release after delay
@@ -464,7 +464,7 @@ def test_infinite_timeout_waits(pytester, run_with_timeout):
 def test_zero_timeout_fails_immediately(pytester, run_with_timeout):
     """Test that timeout=0 fails immediately if lock is held."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
@@ -472,8 +472,8 @@ def test_zero_timeout_fails_immediately(pytester, run_with_timeout):
         from filelock import Timeout as FileLockTimeout
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("test_zero_timeout", timeout=0)
+        def my_shared(make_shared_json):
+            return make_shared_json("test_zero_timeout", timeout=0)
 
         def test_zero_timeout(my_shared):
             # Manually acquire the lock
@@ -501,14 +501,14 @@ def test_zero_timeout_fails_immediately(pytester, run_with_timeout):
 def test_timeout_with_multiple_operations(pytester, run_with_timeout):
     """Test that timeout applies to each operation independently."""
     pytester.makeconftest("""
-        pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
+        pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
     """)
     pytester.makepyfile("""
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory(
+        def my_shared(make_shared_json):
+            return make_shared_json(
                 "test_multi_timeout",
                 on_first_worker={'count': 0},
                 timeout=5
