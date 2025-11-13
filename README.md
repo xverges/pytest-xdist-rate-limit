@@ -33,16 +33,16 @@ pip install git+https://github.com/xverges/pytest-xdist-rate-limit.git
 
 ## Examples
 
-See the [`examples/`](examples/) folder for complete working examples.
+See the [`examples/`](https://github.com/xverges/pytest-xdist-rate-limit/tree/main/examples)
+folder for working examples.
 
 ### Rate Limiting
 
-Use `rate_limiter_fixture_factory` to enforce rate limits across workers.
+Use `make_rate_limiter` to enforce rate limits across workers.
 
 Example using `pytest_xdist_load_testing` to run  ~80% of `test_get` and
 ~20% `test_put` for 10K calls, or until we detect that we cannot keep with
 the requested rate 10 calls per second.
-
 
 ```python
 import pytest
@@ -50,7 +50,7 @@ from pytest_xdist_load_testing import stop_load_testing, weight
 from pytest_xdist_rate_limit import RateLimit
 
 @pytest.fixture(scope="session")
-def pace(request, rate_limiter_fixture_factory):
+def pacer(request, make_rate_limiter):
     """Rate limiter for calls to SUT"""
 
     def on_drift(limiter_id, current_rate, target_rate, drift):
@@ -59,7 +59,7 @@ def pace(request, rate_limiter_fixture_factory):
               f"drift={drift:.2%}")
         stop_load_testing(msg)
 
-    return rate_limiter_fixture_factory(
+    return make_rate_limiter(
         name="pacer",
         hourly_rate=RateLimit.per_second(10),  # 10 calls/second
         max_drift=0.2,  # 20% tolerance
@@ -68,16 +68,16 @@ def pace(request, rate_limiter_fixture_factory):
     )
 
 @weight(80)
-def test_get(pace):
-    with pace.rate_limited_context():
+def test_get(pacer):
+    with pacer():
         # Context entry waits if rate limit would be exceeded
         response = api.get("/data")
 
 @weight(20)
-def test_put(pace):
-    with pace.rate_limited_context() as ctx:
+def test_put(pacer):
+    with pacer() as ctx:
         # Context entry waits if rate limit would be exceeded
-        response = api.put("/data/{ctx['count']}")
+        response = api.put("/data/{ctx.call_count}")
 ```
 
 ### Shared Session state
@@ -86,7 +86,7 @@ def test_put(pace):
 import pytest
 
 @pytest.fixture(scope="session")
-def shared_resource(shared_json_fixture_factory):
+def shared_resource(make_shared_json):
     """Shared resource with setup and teardown."""
 
     def setup():
@@ -98,7 +98,7 @@ def shared_resource(shared_json_fixture_factory):
         # Called by last worker only
         print(f"Final counter value: {data['counter']}")
 
-    return shared_json_fixture_factory(
+    return make_shared_json(
         name="resource",
         on_first_worker=setup,
         on_last_worker=teardown

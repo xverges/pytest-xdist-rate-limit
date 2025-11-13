@@ -35,7 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "pytest>=8.4.2",
-    "pytest-xdist>=2.0.0",
+    "pytest-xdist>=3.8.0",
     "filelock>=3.0.0",
 ]
 

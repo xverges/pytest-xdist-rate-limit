@@ -1,16 +1,16 @@
-"""Tests for rate_limiter_fixture_factory."""
+"""Tests for make_rate_limiter."""
 
 # Conftest content to inject into pytester tests
 CONFTEST_CONTENT = """
 import pytest
-from pytest_xdist_rate_limit import rate_limiter_fixture_factory
+from pytest_xdist_rate_limit import make_rate_limiter
 
 pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
 """
 
 
-def test_rate_limiter_fixture_factory_basic(pytester, run_with_timeout):
-    """Test basic usage of rate_limiter_fixture_factory."""
+def test_make_rate_limiter_basic(pytester, run_with_timeout):
+    """Test basic usage of make_rate_limiter."""
     pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
         """
@@ -18,20 +18,20 @@ def test_rate_limiter_fixture_factory_basic(pytester, run_with_timeout):
         from pytest_xdist_rate_limit import RateLimit
 
         @pytest.fixture(scope="session")
-        def api_limiter(rate_limiter_fixture_factory):
-            return rate_limiter_fixture_factory(
+        def api_limiter(make_rate_limiter):
+            return make_rate_limiter(
                 name="api_test",
                 hourly_rate=RateLimit.per_second(2),
                 burst_capacity=5
             )
 
         def test_api_call_1(api_limiter):
-            with api_limiter.rate_limited_context() as ctx:
+            with api_limiter() as ctx:
                 assert ctx.id == "api_test"
                 assert ctx.call_count >= 1
 
         def test_api_call_2(api_limiter):
-            with api_limiter.rate_limited_context() as ctx:
+            with api_limiter() as ctx:
                 assert ctx.id == "api_test"
                 assert ctx.call_count >= 1
         """
@@ -51,7 +51,7 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
         from pytest_xdist_rate_limit import RateLimit
 
         @pytest.fixture(scope="session")
-        def api_limiter(rate_limiter_fixture_factory, request):
+        def api_limiter(make_rate_limiter, request):
             # Callback that exits the session on drift
             def on_drift(limiter_id, current_rate, target_rate, drift):
                 request.session.shouldstop = True
@@ -61,7 +61,7 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
                     f"Current: {current_rate:.2f}/hr, Target: {target_rate}/hr"
                 )
 
-            return rate_limiter_fixture_factory(
+            return make_rate_limiter(
                 name="api_with_exit",
                 hourly_rate=RateLimit.per_hour(100),  # Very low rate
                 burst_capacity=100,
@@ -83,7 +83,7 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
                     data['exceptions'] = 0
 
             # Make rapid calls to exceed rate
-            with api_limiter.rate_limited_context():
+            with api_limiter():
                 pass
         """
     )
@@ -102,7 +102,7 @@ def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
         from pytest_xdist_rate_limit import RateLimit
 
         @pytest.fixture(scope="session")
-        def limited_api(rate_limiter_fixture_factory, request):
+        def limited_api(make_rate_limiter, request):
             callback_data = []
 
             def on_max_calls(limiter_id, count):
@@ -111,7 +111,7 @@ def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
                 request.session.shouldstop = True
                 pytest.exit(f"Max calls reached: {count}")
 
-            limiter = rate_limiter_fixture_factory(
+            limiter = make_rate_limiter(
                 name="limited_api",
                 hourly_rate=RateLimit.per_second(10),
                 burst_capacity=10,
@@ -123,7 +123,7 @@ def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
 
         @pytest.mark.load_test(weight=1)
         def test_limited_call(limited_api):
-            with limited_api.rate_limited_context():
+            with limited_api():
                 pass
         """
     )
@@ -141,13 +141,13 @@ def test_rate_limiter_dynamic_rate(pytester, run_with_timeout):
         from pytest_xdist_rate_limit import RateLimit
 
         @pytest.fixture(scope="session")
-        def dynamic_limiter(rate_limiter_fixture_factory):
+        def dynamic_limiter(make_rate_limiter):
             rate_values = [RateLimit.per_second(1)]
 
             def get_rate():
                 return rate_values[0]
 
-            limiter = rate_limiter_fixture_factory(
+            limiter = make_rate_limiter(
                 name="dynamic_test",
                 hourly_rate=get_rate,
                 burst_capacity=5
@@ -156,13 +156,13 @@ def test_rate_limiter_dynamic_rate(pytester, run_with_timeout):
             return limiter
 
         def test_dynamic_1(dynamic_limiter):
-            with dynamic_limiter.rate_limited_context() as ctx:
+            with dynamic_limiter() as ctx:
                 assert ctx.hourly_rate == 3600
 
         def test_dynamic_2(dynamic_limiter):
             # Change rate
             dynamic_limiter._rate_values[0] = RateLimit.per_second(2)
-            with dynamic_limiter.rate_limited_context() as ctx:
+            with dynamic_limiter() as ctx:
                 assert ctx.hourly_rate == 7200
         """
     )
@@ -180,30 +180,30 @@ def test_rate_limiter_across_workers(pytester, run_with_timeout):
         from pytest_xdist_rate_limit import RateLimit
 
         @pytest.fixture(scope="session")
-        def shared_limiter(rate_limiter_fixture_factory):
-            return rate_limiter_fixture_factory(
+        def shared_limiter(make_rate_limiter):
+            return make_rate_limiter(
                 name="shared_across_workers",
                 hourly_rate=RateLimit.per_second(5),
                 burst_capacity=10
             )
 
         def test_call_1(shared_limiter):
-            with shared_limiter.rate_limited_context() as ctx:
+            with shared_limiter() as ctx:
                 call_count = ctx.call_count
                 assert call_count >= 1
 
         def test_call_2(shared_limiter):
-            with shared_limiter.rate_limited_context() as ctx:
+            with shared_limiter() as ctx:
                 call_count = ctx.call_count
                 assert call_count >= 1
 
         def test_call_3(shared_limiter):
-            with shared_limiter.rate_limited_context() as ctx:
+            with shared_limiter() as ctx:
                 call_count = ctx.call_count
                 assert call_count >= 1
 
         def test_call_4(shared_limiter):
-            with shared_limiter.rate_limited_context() as ctx:
+            with shared_limiter() as ctx:
                 call_count = ctx.call_count
                 assert call_count >= 1
         """

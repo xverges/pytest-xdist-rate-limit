@@ -268,8 +268,8 @@ def test_name_property_strips_prefix(pytester, run_with_timeout):
         import pytest
 
         @pytest.fixture(scope="session")
-        def my_shared(shared_json_fixture_factory):
-            return shared_json_fixture_factory("my_fixture")
+        def my_shared(make_shared_json):
+            return make_shared_json("my_fixture")
 
         def test_name_property(my_shared):
             # Name should be clean without pytest_shared_ prefix

@@ -78,7 +78,7 @@ def test_rate_limit_with_token_bucket(pytester, run_with_timeout):
     """Test using RateLimit with TokenBucketRateLimiter."""
     pytester.makeconftest("""
 import pytest
-from pytest_xdist_rate_limit import shared_json_fixture_factory
+from pytest_xdist_rate_limit import make_shared_json
 
 pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
 """)
@@ -90,8 +90,8 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
             RateLimit
         )
 
-        def test_with_rate_limit(shared_json_fixture_factory):
-            shared = shared_json_fixture_factory(name="rate_limit_test")
+        def test_with_rate_limit(make_shared_json):
+            shared = make_shared_json(name="rate_limit_test")
 
             # Use RateLimit.per_second
             rate = RateLimit.per_second(1)
@@ -105,7 +105,7 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
             assert limiter.hourly_rate == 3600
 
             # Test it works
-            with limiter.rate_limited_context() as ctx:
+            with limiter() as ctx:
                 assert ctx.call_count == 1
         """
     )
@@ -118,7 +118,7 @@ def test_rate_limit_callable_with_token_bucket(pytester, run_with_timeout):
     """Test using callable RateLimit with TokenBucketRateLimiter."""
     pytester.makeconftest("""
 import pytest
-from pytest_xdist_rate_limit import shared_json_fixture_factory
+from pytest_xdist_rate_limit import make_shared_json
 
 pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
 """)
@@ -130,8 +130,8 @@ pytest_plugins = ['pytest_xdist_rate_limit.concurrent_fixtures']
             RateLimit
         )
 
-        def test_callable_rate_limit(shared_json_fixture_factory):
-            shared = shared_json_fixture_factory(name="callable_rate_test")
+        def test_callable_rate_limit(make_shared_json):
+            shared = make_shared_json(name="callable_rate_test")
 
             # Use callable that returns RateLimit
             rate_value = [RateLimit.per_second(1)]

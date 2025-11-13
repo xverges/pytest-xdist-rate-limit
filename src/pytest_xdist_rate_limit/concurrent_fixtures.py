@@ -136,7 +136,7 @@ class SharedJson:
 
 
 @pytest.fixture(scope="session")
-def shared_json_fixture_factory(
+def make_shared_json(
     request: pytest.FixtureRequest,
     tmp_path_factory: pytest.TempPathFactory,
     worker_id: str,
@@ -156,7 +156,7 @@ def shared_json_fixture_factory(
 
     Example:
         @pytest.fixture(scope="session")
-        def api_rate_tracker(shared_json_fixture_factory):
+        def api_rate_tracker(make_shared_json):
             def init_data():
                 return {
                     'count': 0,
@@ -168,7 +168,7 @@ def shared_json_fixture_factory(
                 data = shared.read()
                 print(f"Total API calls: {data['count']}")
 
-            return shared_json_fixture_factory(
+            return make_shared_json(
                 name="api_rate_tracker",
                 on_first_worker=init_data,
                 on_last_worker=report
@@ -310,7 +310,7 @@ def shared_json_fixture_factory(
 
 
 @pytest.fixture(scope="session")
-def rate_limiter_fixture_factory(shared_json_fixture_factory):
+def make_rate_limiter(make_shared_json):
     """Factory for creating rate limiter fixtures across pytest-xdist workers.
 
     This fixture provides a way to create TokenBucketRateLimiter instances
@@ -318,16 +318,16 @@ def rate_limiter_fixture_factory(shared_json_fixture_factory):
 
     Example:
         @pytest.fixture(scope="session")
-        def api_rate_limiter(rate_limiter_fixture_factory):
+        def pacer(make_rate_limiter):
             from pytest_xdist_rate_limit import RateLimit
 
-            return rate_limiter_fixture_factory(
-                name="api_limiter",
+            return make_rate_limiter(
+                name="pacer",
                 hourly_rate=RateLimit.per_second(10)
             )
 
-        def test_api_call(api_rate_limiter):
-            with api_rate_limiter.rate_limited_context() as ctx:
+        def test_api_call(pacer):
+            with pacer() as ctx:
                 # Entering the context will wait if required to respect the rate
                 pass
     """
@@ -363,7 +363,7 @@ def rate_limiter_fixture_factory(shared_json_fixture_factory):
         Returns:
             TokenBucketRateLimiter: Rate limiter instance
         """
-        shared_state = shared_json_fixture_factory(name=name)
+        shared_state = make_shared_json(name=name)
 
         return TokenBucketRateLimiter(
             shared_state=shared_state,

@@ -51,7 +51,7 @@ def test_concurrent_workers_respect_rate_limit(tmp_path):
 
     def make_call():
         """Make a rate-limited call and record the time."""
-        with limiter.rate_limited_context():
+        with limiter():
             execution_times.append(time.time())
 
     # Run 5 calls concurrently with 2 workers
@@ -105,7 +105,7 @@ def test_concurrent_workers_with_burst_capacity(tmp_path):
     execution_times = []
 
     def make_call():
-        with limiter.rate_limited_context():
+        with limiter():
             execution_times.append(time.time())
 
     # Run 5 calls concurrently
@@ -161,7 +161,7 @@ def test_negative_tokens_prevent_race_condition(tmp_path):
     call_count = [0]
 
     def make_call():
-        with limiter.rate_limited_context():
+        with limiter():
             call_count[0] += 1
 
     # Launch 4 calls simultaneously
