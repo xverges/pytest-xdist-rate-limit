@@ -289,7 +289,7 @@ def test_concurrent_access_with_xdist(pytester, run_with_timeout):
     pytester.makepyfile("""
         import pytest
         from pytest_xdist_rate_limit import SharedJson
-        from pytest_load_testing import weight, stop_load_testing
+        from pytest_xdist_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
         def shared_counter(tmp_path_factory):
