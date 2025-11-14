@@ -285,10 +285,12 @@ class TokenBucketRateLimiter:
             call_count: Total number of calls made
             exceptions: Total number of exceptions encountered
             start_time: Unix timestamp of when the first call was made
+            seconds_waited: Number of seconds waited before entering the context
         """
 
         _limiter: "TokenBucketRateLimiter"
         _state: dict
+        seconds_waited: float = 0.0
 
         @property
         def id(self) -> str:
@@ -339,6 +341,7 @@ class TokenBucketRateLimiter:
                 print(f"Using rate limiter {ctx.id} with rate {ctx.hourly_rate}/hr")
                 print(f"Current call count: {ctx.call_count}")
                 print(f"First call at: {ctx.start_time}")
+                print(f"Waited {ctx.seconds_waited:.2f} seconds")
                 perform_action()
         """
         # Calculate wait time and update tokens atomically
@@ -354,7 +357,7 @@ class TokenBucketRateLimiter:
 
         # Update call count and check rate
         call_count, state_snapshot = self._increment_call_count_and_check_rate()
-        context = self.RateLimitContext(self, state_snapshot)
+        context = self.RateLimitContext(self, state_snapshot, seconds_waited=wait_time)
 
         try:
             yield context
