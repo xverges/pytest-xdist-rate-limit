@@ -28,7 +28,7 @@ import random
 import time
 
 import pytest
-from pytest_load_testing import stop_load_testing, weight
+from pytest_xdist_load_testing import stop_load_testing, weight
 
 from pytest_xdist_rate_limit import RateLimit
 

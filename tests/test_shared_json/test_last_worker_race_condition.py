@@ -21,7 +21,7 @@ def test_last_worker_callback_runs_exactly_once(pytester, run_with_timeout):
         import pytest
         from pathlib import Path
         import time
-        from pytest_load_testing import weight, stop_load_testing
+        from pytest_xdist_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
         def shared_counter(make_shared_json):
@@ -94,7 +94,7 @@ def test_last_worker_detection_with_delayed_workers(pytester, run_with_timeout):
         import pytest
         from pathlib import Path
         import time
-        from pytest_load_testing import weight, stop_load_testing
+        from pytest_xdist_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
         def delayed_fixture(make_shared_json, worker_id):
@@ -163,7 +163,7 @@ def test_race_condition_with_exact_worker_count(pytester, run_with_timeout):
     pytester.makepyfile(f"""
         import pytest
         from pathlib import Path
-        from pytest_load_testing import weight, stop_load_testing
+        from pytest_xdist_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
         def exact_count_fixture(make_shared_json):

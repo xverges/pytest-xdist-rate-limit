@@ -1,7 +1,7 @@
 import pytest
 from _pytest.pytester import Pytester
 
-pytest_plugins = ["pytester", "pytest_load_testing"]
+pytest_plugins = ["pytester", "pytest_xdist_load_testing"]
 
 PYTESTER_TIMEOUT = 10
 

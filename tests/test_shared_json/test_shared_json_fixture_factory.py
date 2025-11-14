@@ -235,7 +235,7 @@ def test_factory_with_xdist_workers(pytester, run_with_timeout):
     """)
     pytester.makepyfile("""
         import pytest
-        from pytest_load_testing import weight, stop_load_testing
+        from pytest_xdist_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
         def shared_data(make_shared_json):
@@ -274,7 +274,7 @@ def test_factory_initialization_race_condition(pytester, run_with_timeout):
     """)
     pytester.makepyfile("""
         import pytest
-        from pytest_load_testing import weight, stop_load_testing
+        from pytest_xdist_load_testing import weight, stop_load_testing
 
         @pytest.fixture(scope="session")
         def shared_init(make_shared_json):
