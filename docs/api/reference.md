@@ -6,7 +6,7 @@ This documentation is automatically generated from the source code docstrings, e
 
 ### SharedJson
 
-::: pytest_xdist_rate_limit.concurrent_fixtures.SharedJson
+::: pytest_xdist_rate_limit.shared_json.SharedJson
     options:
       show_root_heading: true
       show_source: false
@@ -60,14 +60,14 @@ This documentation is automatically generated from the source code docstrings, e
 
 ### make_shared_json
 
-::: pytest_xdist_rate_limit.concurrent_fixtures.make_shared_json
+::: pytest_xdist_rate_limit.shared_json.make_shared_json
     options:
       show_root_heading: true
       show_source: false
 
 ### make_rate_limiter
 
-::: pytest_xdist_rate_limit.concurrent_fixtures.make_rate_limiter
+::: pytest_xdist_rate_limit.rate_limiter_fixture.make_rate_limiter
     options:
       show_root_heading: true
       show_source: false

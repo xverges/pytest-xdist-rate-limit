@@ -1,0 +1,87 @@
+name: Validate Documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate-requirements:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install tomli
+
+      - name: Validate README requirements match pyproject.toml
+        run: |
+          python - <<'EOF'
+          import re
+          import sys
+          try:
+              import tomli
+          except ImportError:
+              import tomllib as tomli
+
+          # Read pyproject.toml
+          with open('pyproject.toml', 'rb') as f:
+              pyproject = tomli.load(f)
+
+          # Extract requirements from pyproject.toml
+          requires_python = pyproject['project']['requires-python']
+          dependencies = pyproject['project']['dependencies']
+
+          # Parse version constraints
+          python_version = re.search(r'>=(\d+\.\d+)', requires_python).group(1)
+
+          dep_versions = {}
+          for dep in dependencies:
+              match = re.match(r'([a-z-]+)>=([0-9.]+)', dep)
+              if match:
+                  dep_versions[match.group(1)] = match.group(2)
+
+          # Read README.md
+          with open('README.md', 'r') as f:
+              readme = f.read()
+
+          # Extract Requirements section
+          req_section = re.search(r'## Requirements\n\n(.*?)\n\n', readme, re.DOTALL)
+          if not req_section:
+              print("ERROR: Could not find Requirements section in README.md")
+              sys.exit(1)
+
+          req_text = req_section.group(1)
+
+          # Validate each requirement
+          errors = []
+
+          # Check Python version
+          if f"Python {python_version}+" not in req_text:
+              errors.append(f"Python version mismatch: README should show 'Python {python_version}+' (from pyproject.toml: {requires_python})")
+
+          # Check dependencies
+          for dep_name, dep_version in dep_versions.items():
+              if f"{dep_name} >= {dep_version}" not in req_text:
+                  errors.append(f"Dependency mismatch: README should show '{dep_name} >= {dep_version}'")
+
+          if errors:
+              print("ERROR: README.md Requirements section does not match pyproject.toml:\n")
+              for error in errors:
+                  print(f"  - {error}")
+              print("\nExpected Requirements section:")
+              print(f"* Python {python_version}+")
+              for dep_name, dep_version in sorted(dep_versions.items()):
+                  print(f"* {dep_name} >= {dep_version}")
+              sys.exit(1)
+
+          print("✓ README.md Requirements section matches pyproject.toml")
+          EOF
