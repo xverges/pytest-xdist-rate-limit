@@ -2,7 +2,11 @@
 
 from .rate_limiter_fixture import make_rate_limiter
 from .shared_json import SharedJson, make_shared_json
-from .token_bucket_rate_limiter import RateLimit, TokenBucketRateLimiter
+from .token_bucket_rate_limiter import (
+    RateLimit,
+    RateLimitTimeout,
+    TokenBucketRateLimiter,
+)
 
 __version__ = "0.1.0"
 __all__ = [
@@ -10,5 +14,6 @@ __all__ = [
     "make_rate_limiter",
     "SharedJson",
     "RateLimit",
+    "RateLimitTimeout",
     "TokenBucketRateLimiter",
 ]

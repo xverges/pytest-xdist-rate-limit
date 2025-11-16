@@ -17,6 +17,19 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+class RateLimitTimeout(Exception):
+    """Raised when rate limiter timeout is exceeded."""
+
+    def __init__(self, limiter_id: str, timeout: float, required_wait: float):
+        self.limiter_id = limiter_id
+        self.timeout = timeout
+        self.required_wait = required_wait
+        super().__init__(
+            f"Rate limiter '{limiter_id}' timeout of {timeout}s exceeded. "
+            f"Would need to wait {required_wait:.2f}s to acquire token."
+        )
+
+
 class RateLimit:
     """
     Represents a rate limit with convenient factory methods for different time units.
@@ -188,10 +201,102 @@ class TokenBucketRateLimiter:
                     self.shared_state.name, current_rate, target_rate, drift
                 )
 
-    def _calculate_wait_time_and_update(self) -> float:
+    def _initialize_state(self, state: Dict[str, Any], current_time: float) -> None:
+        """Initialize the token bucket state if empty."""
+        if not state:
+            state.update(
+                {
+                    "start_time": current_time,
+                    "last_refill_time": current_time,
+                    "tokens": self.burst_capacity,
+                    "call_count": 0,
+                    "exceptions": 0,
+                }
+            )
+
+    def _refill_tokens(self, tokens: float, last_refill_time: float, current_time: float) -> float:
+        """Calculate and return available tokens after refilling.
+
+        Args:
+            tokens: Current token count
+            last_refill_time: Time of last refill
+            current_time: Current time
+
+        Returns:
+            float: Available tokens (before consumption)
         """
-        Calculate how long to wait before allowing the next call using token bucket algorithm.
-        Updates state atomically within the lock.
+        tokens_per_second = self.hourly_rate / 3600
+        elapsed_seconds = max(0, current_time - last_refill_time)
+        new_tokens = elapsed_seconds * tokens_per_second
+        return min(tokens + new_tokens, self.burst_capacity)
+
+    def _consume_token(self, state: Dict[str, Any], tokens: float) -> None:
+        """Consume one token from the bucket.
+
+        Args:
+            state: The shared state dictionary
+            tokens: Available tokens before consumption
+        """
+        # Always consume 1 token immediately, even if it makes tokens negative
+        # Negative tokens represent a "debt" that must be paid back with wait time
+        state["tokens"] = tokens - 1
+
+    def _calculate_wait_time(self, tokens: float) -> float:
+        """Calculate how long to wait based on token availability.
+
+        Args:
+            tokens: Available tokens (before consumption)
+
+        Returns:
+            float: Wait time in seconds (0 if can proceed immediately)
+        """
+        if tokens >= 1:
+            return 0
+
+        # Calculate wait time to pay back the token debt
+        tokens_per_second = self.hourly_rate / 3600
+        # After consuming, tokens will be (tokens - 1), which is negative
+        # We need to wait until tokens refill to 0
+        return abs(tokens - 1) / tokens_per_second
+
+    def _reserve_slot_and_get_target_time(
+        self, state: Dict[str, Any], wait_time: float, current_time: float
+    ) -> float:
+        """Reserve a slot and calculate the target time when this worker can proceed.
+
+        This method updates the state to reserve a slot for this worker, then returns
+        the target time. The caller must release the lock and sleep until the target time.
+
+        Args:
+            state: The shared state dictionary
+            wait_time: Time to wait in seconds
+            current_time: The time when we entered the lock
+
+        Returns:
+            float: Target time (Unix timestamp) when this worker can proceed
+        """
+        if wait_time > 0:
+            # Calculate target time when this worker can proceed
+            target_time = current_time + wait_time
+            # Update last_refill_time to the target time to reserve this slot
+            # This prevents other workers from taking this slot
+            state["last_refill_time"] = target_time
+            return target_time
+        else:
+            state["last_refill_time"] = current_time
+            return current_time
+
+    def _acquire_token_with_wait(self, timeout: Optional[float] = None) -> float:
+        """
+        Acquire a token from the bucket, waiting if necessary.
+
+        This method implements the token bucket algorithm using a reservation system:
+        1. Acquire lock and reserve a slot (updating last_refill_time)
+        2. Release lock
+        3. Sleep until the reserved time
+        4. Proceed
+
+        This prevents race conditions while avoiding lock contention during sleep.
 
         The token bucket algorithm works by:
         1. Adding tokens to the bucket at a constant rate (the refill rate)
@@ -199,46 +304,43 @@ class TokenBucketRateLimiter:
         3. If no tokens are available, the request must wait until a token becomes available
         4. The bucket has a maximum capacity to limit bursts
 
+        Args:
+            timeout: Maximum time in seconds to wait for a token (None for no timeout)
+
         Returns:
-            float: Wait time in seconds (0 if can proceed immediately)
+            float: Time waited in seconds (0 if proceeded immediately)
+
+        Raises:
+            RateLimitTimeout: If timeout is set and wait time exceeds it
         """
+        if timeout is not None and timeout <= 0:
+            raise ValueError(f"timeout must be positive, got {timeout}")
+
         current_time = time.time()
 
+        # Reserve a slot while holding the lock
         with self.shared_state.locked_dict() as state:
-            # Initialize if needed
-            if not state:
-                state.update(
-                    {
-                        "start_time": current_time,
-                        "last_refill_time": current_time,
-                        "tokens": self.burst_capacity,
-                        "call_count": 0,
-                        "exceptions": 0,
-                    }
+            self._initialize_state(state, current_time)
+            tokens = self._refill_tokens(state["tokens"], state["last_refill_time"], current_time)
+            wait_time = self._calculate_wait_time(tokens)
+
+            # Check timeout before consuming token or reserving slot
+            if timeout is not None and wait_time > timeout:
+                raise RateLimitTimeout(self.id, timeout, wait_time)
+
+            self._consume_token(state, tokens)
+            target_time = self._reserve_slot_and_get_target_time(state, wait_time, current_time)
+
+        # Sleep outside the lock until our reserved time
+        if wait_time > 0:
+            actual_wait = target_time - time.time()
+            if actual_wait > 0:
+                logger.debug(
+                    f"Token bucket rate limiter {self.id} waiting for {actual_wait:.2f} seconds"
                 )
+                time.sleep(actual_wait)
 
-            # Calculate tokens to add based on time elapsed since last refill
-            tokens_per_second = self.hourly_rate / 3600
-            elapsed_seconds = current_time - state["last_refill_time"]
-            new_tokens = elapsed_seconds * tokens_per_second
-
-            # Update tokens (can't exceed burst capacity)
-            tokens = min(state["tokens"] + new_tokens, self.burst_capacity)
-
-            # Always consume 1 token immediately, even if it makes tokens negative
-            # This ensures proper serialization across multiple threads/processes
-            # Negative tokens represent a "debt" that must be paid back with wait time
-            state["tokens"] = tokens - 1
-            state["last_refill_time"] = current_time
-
-            # If we had at least 1 token, we can proceed immediately
-            if tokens >= 1:
-                return 0
-
-            # Calculate wait time to pay back the token debt
-            # We need to wait until tokens would have refilled to 0
-            wait_time = abs(state["tokens"]) / tokens_per_second
-            return wait_time
+        return wait_time
 
     def _increment_call_count_and_check_rate(self) -> Tuple[int, Dict[str, Any]]:
         """
@@ -313,13 +415,16 @@ class TokenBucketRateLimiter:
             """Timestamp of when the first call was made (Unix timestamp)."""
             return self._state["start_time"]
 
-    def __call__(self):
+    def __call__(self, timeout: Optional[float] = None):
         """
         Make the rate limiter callable as a context manager.
 
         This allows using the rate limiter with cleaner syntax:
             with pacer():
                 ...
+
+        Args:
+            timeout: Maximum time in seconds to wait for a token (None for no timeout)
 
         Returns:
             Context manager for rate limiting
@@ -328,13 +433,22 @@ class TokenBucketRateLimiter:
             with pacer() as ctx:
                 print(f"Call count: {ctx.call_count}")
                 perform_action()
+
+            with pacer(timeout=5.0) as ctx:
+                print(f"Will timeout after 5 seconds")
+                perform_action()
         """
-        return self.rate_limited_context()
+        return self.rate_limited_context(timeout=timeout)
 
     @contextlib.contextmanager
-    def rate_limited_context(self) -> Generator[RateLimitContext, Any, None]:
+    def rate_limited_context(
+        self, timeout: Optional[float] = None
+    ) -> Generator[RateLimitContext, Any, None]:
         """
         Context manager that rate-limits the enclosed code using token bucket algorithm.
+
+        Args:
+            timeout: Maximum time in seconds to wait for a token (None for no timeout)
 
         Example:
             with rate_limiter.rate_limited_context() as ctx:
@@ -343,17 +457,15 @@ class TokenBucketRateLimiter:
                 print(f"First call at: {ctx.start_time}")
                 print(f"Waited {ctx.seconds_waited:.2f} seconds")
                 perform_action()
-        """
-        # Calculate wait time and update tokens atomically
-        wait_time = self._calculate_wait_time_and_update()
 
-        if wait_time > 0:
-            logger.debug(
-                f"Token bucket rate limiter {self.id} waiting for {wait_time:.2f} seconds"
-            )
-            time.sleep(wait_time)
-        else:
-            logger.debug(f"Token bucket rate limiter {self.id} can proceed immediately")
+            with rate_limiter.rate_limited_context(timeout=5.0) as ctx:
+                print(f"Will timeout after 5 seconds")
+                perform_action()
+        """
+        # Acquire token with wait if necessary
+        # NOTE: The sleep happens inside _acquire_token_with_wait() while holding the lock
+        # to prevent race conditions where multiple workers see the same initial state
+        wait_time = self._acquire_token_with_wait(timeout=timeout)
 
         # Update call count and check rate
         call_count, state_snapshot = self._increment_call_count_and_check_rate()

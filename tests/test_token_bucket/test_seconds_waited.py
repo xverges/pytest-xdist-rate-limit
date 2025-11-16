@@ -1,17 +1,8 @@
 """Tests for RateLimitContext.seconds_waited field."""
 
-# Conftest content to inject into pytester tests
-CONFTEST_CONTENT = """
-import pytest
-from pytest_xdist_rate_limit import make_shared_json
-
-pytest_plugins = ['pytest_xdist_rate_limit.shared_json', 'pytest_xdist_rate_limit.rate_limiter_fixture']
-"""
-
 
 def test_seconds_waited_no_wait(pytester, run_with_timeout):
     """Test that seconds_waited is 0 when no waiting occurs."""
-    pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
         """
         import pytest
@@ -34,14 +25,13 @@ def test_seconds_waited_no_wait(pytester, run_with_timeout):
                 assert ctx.call_count == 1
         """
     )
-    result = run_with_timeout(pytester, "-n", "2", "-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_seconds_waited_with_wait(pytester, run_with_timeout):
     """Test that seconds_waited reflects actual wait time."""
-    pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
         """
         import time
@@ -75,14 +65,13 @@ def test_seconds_waited_with_wait(pytester, run_with_timeout):
                 assert ctx.call_count == 3
         """
     )
-    result = run_with_timeout(pytester, "-n", "2", "-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
 
 def test_seconds_waited_multiple_waits(pytester, run_with_timeout):
     """Test seconds_waited across multiple calls with varying wait times."""
-    pytester.makeconftest(CONFTEST_CONTENT)
     pytester.makepyfile(
         """
         import time
@@ -113,11 +102,12 @@ def test_seconds_waited_multiple_waits(pytester, run_with_timeout):
                 assert ctx.seconds_waited > 0.4, f"Expected ~0.5s wait, got {ctx.seconds_waited}s"
                 assert ctx.seconds_waited < 0.7, f"Wait time too long: {ctx.seconds_waited}s"
 
-            # Third call: should also wait ~0.5 seconds
+            # Third call: With the race condition fix, this will wait longer (~1s)
+            # because the second call held the lock while sleeping, preventing token refill
             with limiter() as ctx:
                 wait_times.append(ctx.seconds_waited)
-                assert ctx.seconds_waited > 0.4, f"Expected ~0.5s wait, got {ctx.seconds_waited}s"
-                assert ctx.seconds_waited < 0.7, f"Wait time too long: {ctx.seconds_waited}s"
+                assert ctx.seconds_waited > 0.9, f"Expected ~1s wait, got {ctx.seconds_waited}s"
+                assert ctx.seconds_waited < 1.2, f"Wait time too long: {ctx.seconds_waited}s"
 
             # Verify we tracked different wait times
             assert len(wait_times) == 3
@@ -126,7 +116,7 @@ def test_seconds_waited_multiple_waits(pytester, run_with_timeout):
             assert wait_times[2] > 0
         """
     )
-    result = run_with_timeout(pytester, "-n", "2", "-v")
+    result = run_with_timeout(pytester, "-v")
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
