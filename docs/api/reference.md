@@ -17,6 +17,13 @@ This documentation is automatically generated from the source code docstrings, e
         - update
         - name
 
+### RateLimitTimeout
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.RateLimitTimeout
+    options:
+      show_root_heading: true
+      show_source: false
+
 ### RateLimit
 
 ::: pytest_xdist_rate_limit.token_bucket_rate_limiter.RateLimit
@@ -55,6 +62,7 @@ This documentation is automatically generated from the source code docstrings, e
         - call_count
         - exceptions
         - start_time
+        - seconds_waited
 
 ## Fixture Factories
 

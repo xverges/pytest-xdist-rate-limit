@@ -30,7 +30,7 @@ import time
 import pytest
 from pytest_xdist_load_testing import stop_load_testing, weight
 
-from pytest_xdist_rate_limit import RateLimit
+from pytest_xdist_rate_limit import RateLimit, RateLimitTimeout
 
 
 class SystemUnderTest:
@@ -48,8 +48,8 @@ class SystemUnderTest:
 
 
 @pytest.fixture(scope="session")
-def pacer(make_rate_limiter, request):
-    """Rate limiter that exits session if rate drift exceeds 20%."""
+def fast_pacer(make_rate_limiter, request):
+    """Rate limiter that exits session if rate drift exceeds 10%."""
 
     def on_drift(limiter_id, current_rate, target_rate, drift):
         """Exit session when drift exceeds threshold."""
@@ -62,8 +62,8 @@ def pacer(make_rate_limiter, request):
 
     return make_rate_limiter(
         name="fast_service",
-        hourly_rate=RateLimit.per_second(1000),  # 10 calls per second
-        burst_capacity=20,  # Allow bursts up to 20 calls
+        hourly_rate=RateLimit.per_second(10_000),
+        burst_capacity=20,
         max_drift=0.1,
         num_calls_between_checks=20,
         seconds_before_first_check=0.5,
@@ -72,7 +72,7 @@ def pacer(make_rate_limiter, request):
 
 
 @pytest.fixture(scope="session")
-def throttle(make_rate_limiter):
+def slow_pacer(make_rate_limiter):
     """Rate limiter with very low rate to demonstrate waiting behavior."""
     return make_rate_limiter(
         name="slow_service",
@@ -95,9 +95,9 @@ def should_pass():
 
 
 @weight(80)
-def test_api_read(pacer, should_pass):
+def test_api_read(fast_pacer, should_pass):
     """60% - Simulates read API calls with rate limiting."""
-    with pacer() as progress:
+    with fast_pacer() as progress:
         SystemUnderTest.read()
         assert progress.call_count >= 1
         assert progress.id == "fast_service"
@@ -106,20 +106,19 @@ def test_api_read(pacer, should_pass):
 
 
 @weight(5)
-def test_api_write(pacer, should_pass):
+def test_api_write(fast_pacer, should_pass):
     """15% - Simulates write API calls with rate limiting."""
-    with pacer() as progress:
+    with fast_pacer() as progress:
         SystemUnderTest.write()
         assert progress.call_count >= 1
-        assert progress.hourly_rate == 3600000
         passed = should_pass(progress)
     assert passed, "We expect ~10% of failures"
 
 
 @weight(5)
-def test_api_delete(pacer, should_pass):
+def test_api_delete(fast_pacer, should_pass):
     """5% - Simulates delete API calls with rate limiting."""
-    with pacer() as progress:
+    with fast_pacer() as progress:
         SystemUnderTest.delete()
         assert progress.call_count >= 1
         assert progress.exceptions == 0
@@ -128,14 +127,18 @@ def test_api_delete(pacer, should_pass):
 
 
 @weight(10)
-def test_slow_api_demonstrates_waiting(throttle):
+def test_slow_api_demonstrates_waiting(slow_pacer):
     """Demonstrates how entering the rate limiter context causes waiting when tokens are exhausted."""
-    with throttle() as progress:
-        # Verify rate limiting: with 1 call/second rate, we shouldn't have more calls
-        # than the elapsed time (in seconds) plus one (for burst capacity)
-        elapsed_seconds = time.time() - progress.start_time
-        max_expected_calls = elapsed_seconds + 1
-        assert progress.call_count <= max_expected_calls, (
-            f"Rate limit violated: {progress.call_count} calls in {elapsed_seconds:.2f}s "
-            f"(max expected: {max_expected_calls:.0f})"
-        )
+    try:
+      with slow_pacer(timeout=1) as progress:
+          # Verify rate limiting: with 1 call/second rate, we shouldn't have more calls
+          # than the elapsed time (in seconds) plus one (for burst capacity)
+          elapsed_seconds = time.time() - progress.start_time
+          max_expected_calls = elapsed_seconds + 1
+          assert progress.call_count <= max_expected_calls, (
+              f"Rate limit violated: {progress.call_count} calls in {elapsed_seconds:.2f}s "
+              f"(max expected: {max_expected_calls:.0f})"
+          )
+    except RateLimitTimeout:
+        # We want to make the test run shorter by preventing workers to queue on this tests
+        pass

@@ -80,6 +80,20 @@ def test_put(pacer):
         response = api.put("/data/{ctx.call_count}")
 ```
 
+#### Timeout Support
+
+You can specify a timeout to prevent tests from waiting too long:
+
+```python
+def test_with_timeout(pacer):
+    try:
+        with pacer(timeout=5.0) as ctx:
+            # Will raise RateLimitTimeout if wait exceeds 5 seconds
+            ...
+    except RateLimitTimeout as e:
+        ...
+```
+
 ### Shared Session state
 
 ```python
