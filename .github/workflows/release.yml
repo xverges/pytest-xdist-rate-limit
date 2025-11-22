@@ -46,9 +46,11 @@ jobs:
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        continue-on-error: true
         with:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
+          verbose: true
 
       - name: Verify TestPyPI release
         run: |
@@ -67,3 +69,5 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
