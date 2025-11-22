@@ -8,7 +8,7 @@ from .token_bucket_rate_limiter import (
     TokenBucketRateLimiter,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.3.1"
 __all__ = [
     "make_shared_json",
     "make_rate_limiter",

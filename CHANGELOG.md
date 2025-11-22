@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.0...v0.3.1) (2025-11-22)
+
+
+### Bug Fixes
+
+* verbose pypi publishing ([#14](https://github.com/xverges/pytest-xdist-rate-limit/issues/14)) ([c4904d9](https://github.com/xverges/pytest-xdist-rate-limit/commit/c4904d92ad4d31d312f085506f294019bfcd8d71))
+
 ## 0.3.0 (2025-11-22)
 
 
