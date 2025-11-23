@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.1...v0.3.2) (2025-11-23)
+
+
+### Bug Fixes
+
+* remove local dependencies ([#16](https://github.com/xverges/pytest-xdist-rate-limit/issues/16)) ([bff1e51](https://github.com/xverges/pytest-xdist-rate-limit/commit/bff1e51dbccb7bbdafce1bc706e8fc4ba26b8b21))
+
 ## [0.3.1](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.0...v0.3.1) (2025-11-22)
 
 
