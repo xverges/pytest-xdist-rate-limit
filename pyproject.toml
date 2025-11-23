@@ -41,7 +41,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest-xdist-load-testing @ git+https://github.com/xverges/pytest-xdist-load-testing.git",
+    "pytest-xdist-load-testing>=0.2.0",
 ]
 
 [project.urls]

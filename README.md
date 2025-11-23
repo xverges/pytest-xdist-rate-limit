@@ -28,7 +28,7 @@ Set the rate at which pytest-xdist workers can run tests.
 ## Installation
 
 ```bash
-pip install git+https://github.com/xverges/pytest-xdist-rate-limit.git
+pip install pytest-xdist-rate-limit
 ```
 
 ## Examples
