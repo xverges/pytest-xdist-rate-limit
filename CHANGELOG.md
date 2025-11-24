@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.3...v1.0.0) (2025-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* Callback signatures have changed to use event objects
+
+### Features
+
+* replace callback parameters with event objects ([#21](https://github.com/xverges/pytest-xdist-rate-limit/issues/21)) ([81b315f](https://github.com/xverges/pytest-xdist-rate-limit/commit/81b315fd678d4e5495d03d1241fbfd3dd8c81848))
+
 ## [0.3.3](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.2...v0.3.3) (2025-11-24)
 
 
