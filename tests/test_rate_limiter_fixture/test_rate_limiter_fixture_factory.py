@@ -63,26 +63,16 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
 
             return make_rate_limiter(
                 name="api_with_exit",
-                hourly_rate=RateLimit.per_hour(100),  # Very low rate
+                hourly_rate=RateLimit.per_second(100_000),
                 burst_capacity=100,
-                max_drift=0.3,  # 30% tolerance
+                max_drift=0.01,
                 num_calls_between_checks=5,
-                seconds_before_first_check=1.0,  # Check after 1 second
+                seconds_before_first_check=0.4,
                 on_drift_callback=on_drift
             )
 
         @pytest.mark.load_test(weight=1)
         def test_api_call(api_limiter):
-            # Manually set start time to trigger rate check
-            with api_limiter.shared_state.locked_dict() as data:
-                if not data:
-                    data['start_time'] = time.time() - 2  # 2 seconds ago
-                    data['last_refill_time'] = time.time()
-                    data['tokens'] = 100
-                    data['call_count'] = 0
-                    data['exceptions'] = 0
-
-            # Make rapid calls to exceed rate
             with api_limiter():
                 pass
         """
