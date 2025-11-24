@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.2...v0.3.3) (2025-11-24)
+
+
+### Bug Fixes
+
+* Pay tokens with either wait time or tokens ([#18](https://github.com/xverges/pytest-xdist-rate-limit/issues/18)) ([8cb131f](https://github.com/xverges/pytest-xdist-rate-limit/commit/8cb131f9720a3d37e55d91cd778a697b3720d6c0))
+
 ## [0.3.2](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.1...v0.3.2) (2025-11-23)
 
 
