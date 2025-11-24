@@ -225,8 +225,10 @@ class TokenBucketRateLimiter:
         Returns:
             float: Available tokens (before consumption)
         """
+        if (current_time - last_refill_time) < 0:
+            return 0
         tokens_per_second = self.hourly_rate / 3600
-        elapsed_seconds = max(0, current_time - last_refill_time)
+        elapsed_seconds = current_time - last_refill_time
         new_tokens = elapsed_seconds * tokens_per_second
         return min(tokens + new_tokens, self.burst_capacity)
 
@@ -260,7 +262,7 @@ class TokenBucketRateLimiter:
         return abs(tokens - 1) / tokens_per_second
 
     def _reserve_slot_and_get_target_time(
-        self, state: Dict[str, Any], wait_time: float, current_time: float
+        self, state: Dict[str, Any], wait_time: float, current_time: float, tokens: float
     ) -> float:
         """Reserve a slot and calculate the target time when this worker can proceed.
 
@@ -276,15 +278,14 @@ class TokenBucketRateLimiter:
             float: Target time (Unix timestamp) when this worker can proceed
         """
         if wait_time > 0:
-            # Calculate target time when this worker can proceed
+            # Pay token with its wait time equivalent
             target_time = current_time + wait_time
-            # Update last_refill_time to the target time to reserve this slot
-            # This prevents other workers from taking this slot
-            state["last_refill_time"] = target_time
-            return target_time
         else:
-            state["last_refill_time"] = current_time
-            return current_time
+            # Pay token with one token
+            self._consume_token(state, tokens)
+            target_time = current_time
+        state["last_refill_time"] = target_time
+        return target_time
 
     def _acquire_token_with_wait(self, timeout: Optional[float] = None) -> float:
         """
@@ -321,15 +322,21 @@ class TokenBucketRateLimiter:
         # Reserve a slot while holding the lock
         with self.shared_state.locked_dict() as state:
             self._initialize_state(state, current_time)
-            tokens = self._refill_tokens(state["tokens"], state["last_refill_time"], current_time)
-            wait_time = self._calculate_wait_time(tokens)
+            last_refill_time = state["last_refill_time"]
+            current_wait = last_refill_time - current_time
+            if current_wait > 0:
+              # There are reserved slots. No tokens available.
+              tokens = 0
+              wait_time = current_wait + self._calculate_wait_time(tokens)
+            else:
+              tokens = self._refill_tokens(state["tokens"], last_refill_time, current_time)
+              wait_time = self._calculate_wait_time(tokens)
 
             # Check timeout before consuming token or reserving slot
             if timeout is not None and wait_time > timeout:
                 raise RateLimitTimeout(self.id, timeout, wait_time)
 
-            self._consume_token(state, tokens)
-            target_time = self._reserve_slot_and_get_target_time(state, wait_time, current_time)
+            target_time = self._reserve_slot_and_get_target_time(state, wait_time, current_time, tokens)
 
         # Sleep outside the lock until our reserved time
         if wait_time > 0:
