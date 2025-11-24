@@ -17,6 +17,68 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+@dataclass
+class RateLimitEvent:
+    """Base class for all rate limiter events.
+    
+    Provides common context available to all callback events.
+    
+    Attributes:
+        limiter_id: Unique identifier for the rate limiter
+        limiter: Reference to the TokenBucketRateLimiter instance
+        state_snapshot: Snapshot of shared state at the time of the event
+    """
+    limiter_id: str
+    limiter: 'TokenBucketRateLimiter'
+    state_snapshot: Dict[str, Any]
+    
+    @property
+    def call_count(self) -> int:
+        """Total number of calls made."""
+        return self.state_snapshot['call_count']
+    
+    @property
+    def exceptions(self) -> int:
+        """Total number of exceptions encountered."""
+        return self.state_snapshot['exceptions']
+    
+    @property
+    def start_time(self) -> float:
+        """Unix timestamp of when the first call was made."""
+        return self.state_snapshot['start_time']
+    
+    @property
+    def elapsed_time(self) -> float:
+        """Time elapsed since the first call (in seconds)."""
+        return time.time() - self.start_time
+
+
+@dataclass
+class DriftEvent(RateLimitEvent):
+    """Event fired when rate drift exceeds the configured threshold.
+    
+    Attributes:
+        current_rate: Actual rate in calls per hour
+        target_rate: Target rate in calls per hour
+        drift: Drift as a fraction of target rate (0.1 = 10% drift)
+        max_drift: Maximum allowed drift (from configuration)
+    """
+    current_rate: float
+    target_rate: float
+    drift: float
+    max_drift: float
+
+
+@dataclass
+class MaxCallsEvent(RateLimitEvent):
+    """Event fired when the max_calls limit is reached.
+    
+    Attributes:
+        max_calls: Maximum number of calls allowed (from configuration)
+    """
+    max_calls: int
+
+
 class RateLimitTimeout(Exception):
     """Raised when rate limiter timeout is exceeded."""
 
@@ -91,12 +153,12 @@ class TokenBucketRateLimiter:
         shared_state: SharedJson,
         hourly_rate: Union[RateLimit, Callable[[], RateLimit]],
         max_drift: float = 0.1,
-        on_drift_callback: Optional[Callable[[str, float, float, float], None]] = None,
+        on_drift_callback: Optional[Callable[[DriftEvent], None]] = None,
         num_calls_between_checks: int = 10,
         seconds_before_first_check: float = 60.0,
         burst_capacity: Optional[int] = None,
         max_calls: int = -1,
-        max_call_callback: Optional[Callable[[str, int], None]] = None,
+        on_max_calls_callback: Optional[Callable[[MaxCallsEvent], None]] = None,
     ):
         """
         Initialize a token bucket rate limiter.
@@ -108,16 +170,15 @@ class TokenBucketRateLimiter:
                         - Callable: function returning RateLimit
             max_drift: Maximum allowed drift from the expected rate (as a fraction)
             on_drift_callback: Callback function to execute when drift exceeds max_drift
-                               Function signature: (id: str, current_rate: float,
-                               target_rate: float, drift: float) -> None
+                               Function signature: (event: DriftEvent) -> None
             num_calls_between_checks: Number of calls between rate drift checks (default: 10)
             seconds_before_first_check: Minimum elapsed time (seconds) before rate checking begins
                                        (default: 60.0 seconds)
             burst_capacity: Maximum number of tokens that can be stored in the bucket
                            (defaults to 10% of hourly rate or 1, whichever is larger)
             max_calls: Maximum number of calls allowed (-1 for unlimited)
-            max_call_callback: Callback function to execute when max_calls is reached
-                               Function signature: (id: str, call_count: int) -> None
+            on_max_calls_callback: Callback function to execute when max_calls is reached
+                                   Function signature: (event: MaxCallsEvent) -> None
         """
         # Validate input parameters
         if not 0 <= max_drift <= 1:
@@ -145,7 +206,8 @@ class TokenBucketRateLimiter:
             else self._calculate_default_burst_capacity(self.hourly_rate)
         )
         self.max_calls = max_calls
-        self.max_call_callback = max_call_callback
+        self.on_max_calls_callback = on_max_calls_callback
+
 
     @staticmethod
     def _calculate_default_burst_capacity(hourly_rate: int) -> int:
@@ -197,9 +259,17 @@ class TokenBucketRateLimiter:
             logger.error(message)
 
             if self.on_drift_callback:
-                self.on_drift_callback(
-                    self.shared_state.name, current_rate, target_rate, drift
+                event = DriftEvent(
+                    limiter_id=self.shared_state.name,
+                    limiter=self,
+                    state_snapshot=dict(state),
+                    current_rate=current_rate,
+                    target_rate=target_rate,
+                    drift=drift,
+                    max_drift=self.max_drift,
                 )
+                self.on_drift_callback(event)
+
 
     def _initialize_state(self, state: Dict[str, Any], current_time: float) -> None:
         """Initialize the token bucket state if empty."""
@@ -374,14 +444,21 @@ class TokenBucketRateLimiter:
         with self.shared_state.locked_dict() as state:
             state["exceptions"] = state.get("exceptions", 0) + 1
 
-    def _check_max_calls(self, call_count: int) -> None:
+    def _check_max_calls(self, call_count: int, state_snapshot: Dict[str, Any]) -> None:
         """Check if max_calls limit has been reached and invoke callback if configured."""
         if self.max_calls > 0 and call_count >= self.max_calls:
             logger.info(
                 f"Rate limiter {self.shared_state.name} reached max_calls limit of {self.max_calls}"
             )
-            if self.max_call_callback:
-                self.max_call_callback(self.shared_state.name, call_count)
+            if self.on_max_calls_callback:
+                event = MaxCallsEvent(
+                    limiter_id=self.shared_state.name,
+                    limiter=self,
+                    state_snapshot=state_snapshot,
+                    max_calls=self.max_calls,
+                )
+                self.on_max_calls_callback(event)
+
 
     @dataclass
     class RateLimitContext:
@@ -484,4 +561,5 @@ class TokenBucketRateLimiter:
             self._track_exception()
             raise
         finally:
-            self._check_max_calls(call_count)
+            self._check_max_calls(call_count, state_snapshot)
+

@@ -148,15 +148,15 @@ def test_max_calls_limit(pytester, run_with_timeout):
 
             callback_data = []
 
-            def on_max_calls(limiter_id, count):
-                callback_data.append((limiter_id, count))
+            def on_max_calls(event):
+                callback_data.append((event.limiter_id, event.call_count, event.max_calls))
 
             limiter = TokenBucketRateLimiter(
                 shared_state=shared,
                 hourly_rate=RateLimit.per_second(10),  # High rate to avoid waiting
                 burst_capacity=10,
                 max_calls=3,
-                max_call_callback=on_max_calls
+                on_max_calls_callback=on_max_calls
             )
 
             # Make 3 calls
@@ -166,7 +166,7 @@ def test_max_calls_limit(pytester, run_with_timeout):
 
             # Callback should have been triggered
             assert len(callback_data) == 1
-            assert callback_data[0] == ("max_calls_test", 3)
+            assert callback_data[0] == ("max_calls_test", 3, 3)
         """
     )
     result = run_with_timeout(pytester, "-n", "2", "-v")
@@ -191,12 +191,15 @@ def test_rate_drift_detection(pytester, run_with_timeout):
 
             drift_data = []
 
-            def on_drift(limiter_id, current_rate, target_rate, drift):
+            def on_drift(event):
                 drift_data.append({
-                    'id': limiter_id,
-                    'current': current_rate,
-                    'target': target_rate,
-                    'drift': drift
+                    'id': event.limiter_id,
+                    'current': event.current_rate,
+                    'target': event.target_rate,
+                    'drift': event.drift,
+                    'max_drift': event.max_drift,
+                    'call_count': event.call_count,
+                    'exceptions': event.exceptions
                 })
 
             limiter = TokenBucketRateLimiter(
@@ -226,6 +229,7 @@ def test_rate_drift_detection(pytester, run_with_timeout):
             assert len(drift_data) >= 1, f"Expected drift callback, got {len(drift_data)} calls"
             assert drift_data[0]['id'] == 'drift_test'
             assert drift_data[0]['drift'] > 0.5
+            assert drift_data[0]['max_drift'] == 0.5
         """
     )
     result = run_with_timeout(pytester, "-n", "2", "-v", "-s")

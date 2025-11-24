@@ -40,12 +40,12 @@ def make_rate_limiter(make_shared_json):
         name: str,
         hourly_rate: Union[RateLimit, Callable[[], RateLimit]],
         max_drift: float = 0.1,
-        on_drift_callback: Optional[Callable[[str, float, float, float], None]] = None,
+        on_drift_callback: Optional[Callable[["TokenBucketRateLimiter.DriftEvent"], None]] = None,
         num_calls_between_checks: int = 10,
         seconds_before_first_check: float = 60.0,
         burst_capacity: Optional[int] = None,
         max_calls: int = -1,
-        max_call_callback: Optional[Callable[[str, int], None]] = None,
+        on_max_calls_callback: Optional[Callable[["TokenBucketRateLimiter.MaxCallsEvent"], None]] = None,
     ) -> TokenBucketRateLimiter:
         """Create a TokenBucketRateLimiter instance with shared state.
 
@@ -54,11 +54,13 @@ def make_rate_limiter(make_shared_json):
             hourly_rate: Rate limit (RateLimit object or callable returning one)
             max_drift: Maximum allowed drift from expected rate (0-1)
             on_drift_callback: Callback when drift exceeds max_drift
+                               Function signature: (event: DriftEvent) -> None
             num_calls_between_checks: Number of calls between rate checks
             seconds_before_first_check: Minimum time before rate checking begins
             burst_capacity: Maximum tokens in bucket (defaults to 10% of hourly rate)
             max_calls: Maximum number of calls allowed (-1 for unlimited)
-            max_call_callback: Callback when max_calls is reached
+            on_max_calls_callback: Callback when max_calls is reached
+                                   Function signature: (event: MaxCallsEvent) -> None
 
         Returns:
             TokenBucketRateLimiter: Rate limiter instance
@@ -74,8 +76,9 @@ def make_rate_limiter(make_shared_json):
             seconds_before_first_check=seconds_before_first_check,
             burst_capacity=burst_capacity,
             max_calls=max_calls,
-            max_call_callback=max_call_callback,
+            on_max_calls_callback=on_max_calls_callback,
         )
 
     return factory
+
 
