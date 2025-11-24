@@ -53,18 +53,27 @@ from pytest_xdist_rate_limit import RateLimit
 def pacer(request, make_rate_limiter):
     """Rate limiter for calls to SUT"""
 
-    def on_drift(limiter_id, current_rate, target_rate, drift):
-        msg = f"Rate drift for {limiter_id}: "
-              f"current={current_rate:.2f}/hr, target={target_rate}/hr, "
-              f"drift={drift:.2%}")
+    def on_drift(event):
+        """Called when rate drift exceeds max_drift threshold.
+        """
+        msg = (f"Rate drift for {event.limiter_id}: "
+               f"current={event.current_rate:.2f}/hr, target={event.target_rate}/hr, "
+               f"drift={event.drift:.2%}")
+        stop_load_testing(msg)
+
+    def on_max_calls(event):
+        """Called when max_calls limit is reached.
+        """
+        msg = f"Reached {event.max_calls} calls in {event.elapsed_time:.1f}s"
         stop_load_testing(msg)
 
     return make_rate_limiter(
         name="pacer",
         hourly_rate=RateLimit.per_second(10),  # 10 calls/second
         max_drift=0.2,  # 20% tolerance
-        on_drift=on_drift,
-        max_calls = 10_000
+        on_drift_callback=on_drift,
+        max_calls=10_000,
+        on_max_calls_callback=on_max_calls
     )
 
 @weight(80)
@@ -77,7 +86,7 @@ def test_get(pacer):
 def test_put(pacer):
     with pacer() as ctx:
         # Context entry waits if rate limit would be exceeded
-        response = api.put("/data/{ctx.call_count}")
+        response = api.put(f"/data/{ctx.call_count}")
 ```
 
 #### Timeout Support

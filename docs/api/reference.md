@@ -24,6 +24,45 @@ This documentation is automatically generated from the source code docstrings, e
       show_root_heading: true
       show_source: false
 
+### Event Classes
+
+#### RateLimitEvent
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.RateLimitEvent
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - limiter_id
+        - limiter
+        - state_snapshot
+        - call_count
+        - exceptions
+        - start_time
+        - elapsed_time
+
+#### DriftEvent
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.DriftEvent
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - current_rate
+        - target_rate
+        - drift
+        - max_drift
+
+#### MaxCallsEvent
+
+::: pytest_xdist_rate_limit.token_bucket_rate_limiter.MaxCallsEvent
+    options:
+      show_root_heading: true
+      show_source: false
+      members:
+        - max_calls
+
+
 ### RateLimit
 
 ::: pytest_xdist_rate_limit.token_bucket_rate_limiter.RateLimit

@@ -53,12 +53,12 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
         @pytest.fixture(scope="session")
         def api_limiter(make_rate_limiter, request):
             # Callback that exits the session on drift
-            def on_drift(limiter_id, current_rate, target_rate, drift):
+            def on_drift(event):
                 request.session.shouldstop = True
                 request.session.shouldfail = True
                 pytest.exit(
-                    f"Rate drift detected: {drift:.2%} exceeds limit. "
-                    f"Current: {current_rate:.2f}/hr, Target: {target_rate}/hr"
+                    f"Rate drift detected: {event.drift:.2%} exceeds limit. "
+                    f"Current: {event.current_rate:.2f}/hr, Target: {event.target_rate}/hr"
                 )
 
             return make_rate_limiter(
@@ -95,18 +95,18 @@ def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
         def limited_api(make_rate_limiter, request):
             callback_data = []
 
-            def on_max_calls(limiter_id, count):
-                callback_data.append((limiter_id, count))
+            def on_max_calls(event):
+                callback_data.append((event.limiter_id, event.call_count))
                 # Exit session when max calls reached
                 request.session.shouldstop = True
-                pytest.exit(f"Max calls reached: {count}")
+                pytest.exit(f"Max calls reached: {event.call_count}")
 
             limiter = make_rate_limiter(
                 name="limited_api",
                 hourly_rate=RateLimit.per_second(10),
                 burst_capacity=10,
                 max_calls=3,
-                max_call_callback=on_max_calls
+                on_max_calls_callback=on_max_calls
             )
             limiter._callback_data = callback_data
             return limiter

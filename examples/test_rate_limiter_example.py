@@ -51,12 +51,12 @@ class SystemUnderTest:
 def fast_pacer(make_rate_limiter, request):
     """Rate limiter that exits session if rate drift exceeds 10%."""
 
-    def on_drift(limiter_id, current_rate, target_rate, drift):
+    def on_drift(event):
         """Exit session when drift exceeds threshold."""
         message = (
-            f"Rate drift for {limiter_id} exceeds maximum allowed: "
-            f"current={current_rate:.2f}/hr, target={target_rate}/hr, "
-            f"drift={drift:.2%}"
+            f"Rate drift for {event.limiter_id} exceeds maximum allowed: "
+            f"current={event.current_rate:.2f}/hr, target={event.target_rate}/hr, "
+            f"drift={event.drift:.2%}"
         )
         stop_load_testing(request, message)
 
@@ -69,6 +69,7 @@ def fast_pacer(make_rate_limiter, request):
         seconds_before_first_check=0.5,
         on_drift_callback=on_drift,
     )
+
 
 
 @pytest.fixture(scope="session")
