@@ -1,81 +1,81 @@
-"""Tests for RateLimit class."""
+"""Tests for Rate class."""
 
 import pytest
 
-from pytest_xdist_rate_limit import RateLimit
+from pytest_xdist_rate_limit import Rate
 
 
 def test_rate_limit_per_second():
-    """Test RateLimit.per_second factory method."""
-    rate = RateLimit.per_second(10)
+    """Test Rate.per_second factory method."""
+    rate = Rate.per_second(10)
     assert rate.calls_per_hour == 36000
 
-    rate = RateLimit.per_second(1)
+    rate = Rate.per_second(1)
     assert rate.calls_per_hour == 3600
 
-    rate = RateLimit.per_second(0.5)
+    rate = Rate.per_second(0.5)
     assert rate.calls_per_hour == 1800
 
 
 def test_rate_limit_per_minute():
-    """Test RateLimit.per_minute factory method."""
-    rate = RateLimit.per_minute(100)
+    """Test Rate.per_minute factory method."""
+    rate = Rate.per_minute(100)
     assert rate.calls_per_hour == 6000
 
-    rate = RateLimit.per_minute(60)
+    rate = Rate.per_minute(60)
     assert rate.calls_per_hour == 3600
 
-    rate = RateLimit.per_minute(1)
+    rate = Rate.per_minute(1)
     assert rate.calls_per_hour == 60
 
 
 def test_rate_limit_per_hour():
-    """Test RateLimit.per_hour factory method."""
-    rate = RateLimit.per_hour(3600)
+    """Test Rate.per_hour factory method."""
+    rate = Rate.per_hour(3600)
     assert rate.calls_per_hour == 3600
 
-    rate = RateLimit.per_hour(1000)
+    rate = Rate.per_hour(1000)
     assert rate.calls_per_hour == 1000
 
 
 def test_rate_limit_per_day():
-    """Test RateLimit.per_day factory method."""
-    rate = RateLimit.per_day(86400)
+    """Test Rate.per_day factory method."""
+    rate = Rate.per_day(86400)
     assert rate.calls_per_hour == 3600
 
-    rate = RateLimit.per_day(24000)
+    rate = Rate.per_day(24000)
     assert rate.calls_per_hour == 1000
 
-    rate = RateLimit.per_day(2400)
+    rate = Rate.per_day(2400)
     assert rate.calls_per_hour == 100
 
 
 def test_rate_limit_direct_construction():
-    """Test direct RateLimit construction."""
-    rate = RateLimit(5000)
+    """Test direct Rate construction."""
+    rate = Rate(5000)
     assert rate.calls_per_hour == 5000
 
 
 def test_rate_limit_invalid_rate():
     """Test that invalid rates raise ValueError."""
     with pytest.raises(ValueError, match="calls_per_hour must be positive"):
-        RateLimit(0)
+        Rate(0)
 
     with pytest.raises(ValueError, match="calls_per_hour must be positive"):
-        RateLimit(-100)
+        Rate(-100)
 
 
 def test_rate_limit_repr():
-    """Test RateLimit string representation."""
-    rate = RateLimit.per_hour(3600)
-    assert repr(rate) == "RateLimit(3600 calls/hour)"
+    """Test Rate string representation."""
+    rate = Rate.per_hour(3600)
+    assert repr(rate) == "Rate(3600 calls/hour)"
 
-    rate = RateLimit.per_second(10)
-    assert repr(rate) == "RateLimit(36000 calls/hour)"
+    rate = Rate.per_second(10)
+    assert repr(rate) == "Rate(36000 calls/hour)"
 
 
 def test_rate_limit_with_token_bucket(pytester, run_with_timeout):
-    """Test using RateLimit with TokenBucketRateLimiter."""
+    """Test using Rate with TokenBucketPacer."""
     pytester.makeconftest("""
 import pytest
 from pytest_xdist_rate_limit import make_shared_json
@@ -86,16 +86,16 @@ pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_with_rate_limit(make_shared_json):
             shared = make_shared_json(name="rate_limit_test")
 
-            # Use RateLimit.per_second
-            rate = RateLimit.per_second(1)
-            limiter = TokenBucketRateLimiter(
+            # Use Rate.per_second
+            rate = Rate.per_second(1)
+            limiter = TokenBucketPacer(
                 shared_state=shared,
                 hourly_rate=rate,
                 burst_capacity=2
@@ -115,7 +115,7 @@ pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
 
 
 def test_rate_limit_callable_with_token_bucket(pytester, run_with_timeout):
-    """Test using callable RateLimit with TokenBucketRateLimiter."""
+    """Test using callable Rate with TokenBucketPacer."""
     pytester.makeconftest("""
 import pytest
 from pytest_xdist_rate_limit import make_shared_json
@@ -126,20 +126,20 @@ pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_callable_rate_limit(make_shared_json):
             shared = make_shared_json(name="callable_rate_test")
 
-            # Use callable that returns RateLimit
-            rate_value = [RateLimit.per_second(1)]
+            # Use callable that returns Rate
+            rate_value = [Rate.per_second(1)]
 
             def get_rate():
                 return rate_value[0]
 
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
                 hourly_rate=get_rate,
                 burst_capacity=2
@@ -149,7 +149,7 @@ pytest_plugins = ['pytest_xdist_rate_limit.shared_json']
             assert limiter.hourly_rate == 3600
 
             # Change rate
-            rate_value[0] = RateLimit.per_second(2)
+            rate_value[0] = Rate.per_second(2)
 
             # Verify new rate is used
             assert limiter.hourly_rate == 7200

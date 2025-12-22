@@ -15,13 +15,13 @@ def test_make_rate_limiter_basic(pytester, run_with_timeout):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_xdist_rate_limit import RateLimit
+        from pytest_xdist_rate_limit import Rate
 
         @pytest.fixture(scope="session")
         def api_limiter(make_rate_limiter):
             return make_rate_limiter(
                 name="api_test",
-                hourly_rate=RateLimit.per_second(2),
+                hourly_rate=Rate.per_second(2),
                 burst_capacity=5
             )
 
@@ -48,7 +48,7 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
         """
         import time
         import pytest
-        from pytest_xdist_rate_limit import RateLimit
+        from pytest_xdist_rate_limit import Rate
 
         @pytest.fixture(scope="session")
         def api_limiter(make_rate_limiter, request):
@@ -63,7 +63,7 @@ def test_rate_limiter_with_load_test_and_exit_callback(pytester, run_with_timeou
 
             return make_rate_limiter(
                 name="api_with_exit",
-                hourly_rate=RateLimit.per_second(100_000),
+                hourly_rate=Rate.per_second(100_000),
                 burst_capacity=100,
                 max_drift=0.01,
                 num_calls_between_checks=5,
@@ -89,7 +89,7 @@ def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_xdist_rate_limit import RateLimit
+        from pytest_xdist_rate_limit import Rate
 
         @pytest.fixture(scope="session")
         def limited_api(make_rate_limiter, request):
@@ -103,7 +103,7 @@ def test_rate_limiter_with_max_calls_callback(pytester, run_with_timeout):
 
             limiter = make_rate_limiter(
                 name="limited_api",
-                hourly_rate=RateLimit.per_second(10),
+                hourly_rate=Rate.per_second(10),
                 burst_capacity=10,
                 max_calls=3,
                 on_max_calls_callback=on_max_calls
@@ -128,11 +128,11 @@ def test_rate_limiter_dynamic_rate(pytester, run_with_timeout):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_xdist_rate_limit import RateLimit
+        from pytest_xdist_rate_limit import Rate
 
         @pytest.fixture(scope="session")
         def dynamic_limiter(make_rate_limiter):
-            rate_values = [RateLimit.per_second(1)]
+            rate_values = [Rate.per_second(1)]
 
             def get_rate():
                 return rate_values[0]
@@ -151,7 +151,7 @@ def test_rate_limiter_dynamic_rate(pytester, run_with_timeout):
 
         def test_dynamic_2(dynamic_limiter):
             # Change rate
-            dynamic_limiter._rate_values[0] = RateLimit.per_second(2)
+            dynamic_limiter._rate_values[0] = Rate.per_second(2)
             with dynamic_limiter() as ctx:
                 assert ctx.hourly_rate == 7200
         """
@@ -167,13 +167,13 @@ def test_rate_limiter_across_workers(pytester, run_with_timeout):
     pytester.makepyfile(
         """
         import pytest
-        from pytest_xdist_rate_limit import RateLimit
+        from pytest_xdist_rate_limit import Rate
 
         @pytest.fixture(scope="session")
         def shared_limiter(make_rate_limiter):
             return make_rate_limiter(
                 name="shared_across_workers",
-                hourly_rate=RateLimit.per_second(5),
+                hourly_rate=Rate.per_second(5),
                 burst_capacity=10
             )
 

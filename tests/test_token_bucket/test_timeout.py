@@ -1,4 +1,4 @@
-"""Tests for TokenBucketRateLimiter timeout functionality."""
+"""Tests for TokenBucketPacer timeout functionality."""
 
 def test_timeout_not_exceeded(pytester, run_with_timeout):
     """Test that timeout is not raised when wait time is within limit."""
@@ -6,16 +6,16 @@ def test_timeout_not_exceeded(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit,
+            TokenBucketPacer,
+            Rate,
             RateLimitTimeout
         )
 
         def test_no_timeout(make_shared_json):
             shared = make_shared_json(name="no_timeout_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(2),  # 2 calls per second
+                hourly_rate=Rate.per_second(2),  # 2 calls per second
                 burst_capacity=1
             )
 
@@ -42,16 +42,16 @@ def test_timeout_exceeded(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit,
+            TokenBucketPacer,
+            Rate,
             RateLimitTimeout
         )
 
         def test_timeout_exceeded(make_shared_json):
             shared = make_shared_json(name="timeout_exceeded_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),  # 1 call per second
+                hourly_rate=Rate.per_second(1),  # 1 call per second
                 burst_capacity=1
             )
 
@@ -84,15 +84,15 @@ def test_timeout_none_allows_unlimited_wait(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_no_timeout_limit(make_shared_json):
             shared = make_shared_json(name="unlimited_wait_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=1
             )
 
@@ -117,15 +117,15 @@ def test_timeout_validation(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_negative_timeout(make_shared_json):
             shared = make_shared_json(name="negative_timeout_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1)
+                hourly_rate=Rate.per_second(1)
             )
 
             with pytest.raises(ValueError, match="timeout must be positive"):
@@ -134,9 +134,9 @@ def test_timeout_validation(pytester, run_with_timeout):
 
         def test_zero_timeout(make_shared_json):
             shared = make_shared_json(name="zero_timeout_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1)
+                hourly_rate=Rate.per_second(1)
             )
 
             with pytest.raises(ValueError, match="timeout must be positive"):
@@ -155,16 +155,16 @@ def test_timeout_with_burst_capacity(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit,
+            TokenBucketPacer,
+            Rate,
             RateLimitTimeout
         )
 
         def test_burst_then_timeout(make_shared_json):
             shared = make_shared_json(name="burst_timeout_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=3  # Allow 3 immediate calls
             )
 
@@ -195,17 +195,17 @@ def test_timeout_with_concurrent_workers(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit,
+            TokenBucketPacer,
+            Rate,
             RateLimitTimeout
         )
 
         @pytest.fixture(scope="session")
         def rate_limiter(make_shared_json):
             shared = make_shared_json(name="concurrent_timeout_test")
-            return TokenBucketRateLimiter(
+            return TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(2),
+                hourly_rate=Rate.per_second(2),
                 burst_capacity=2
             )
 
@@ -244,16 +244,16 @@ def test_timeout_error_attributes(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit,
+            TokenBucketPacer,
+            Rate,
             RateLimitTimeout
         )
 
         def test_error_attributes(make_shared_json):
             shared = make_shared_json(name="error_attrs_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=1
             )
 
@@ -288,4 +288,3 @@ def test_timeout_error_attributes(pytester, run_with_timeout):
     outcomes = result.parseoutcomes()
     assert "passed" in outcomes and outcomes["passed"] == 1, str(result.stdout)
 
-# Made with Bob

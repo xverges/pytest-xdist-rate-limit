@@ -1,4 +1,4 @@
-"""Tests for TokenBucketRateLimiter."""
+"""Tests for TokenBucketPacer."""
 
 # Conftest content to inject into pytester tests
 CONFTEST_CONTENT = """
@@ -17,15 +17,15 @@ def test_basic_rate_limiting(pytester, run_with_timeout):
         import time
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_rate_limiter(make_shared_json):
             shared = make_shared_json(name="rate_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=2
             )
 
@@ -58,19 +58,19 @@ def test_hourly_rate_function(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_dynamic_rate(make_shared_json):
             shared = make_shared_json(name="dynamic_rate")
 
-            rate_value = [RateLimit.per_second(1)]  # Start at 1/sec
+            rate_value = [Rate.per_second(1)]  # Start at 1/sec
 
             def get_rate():
                 return rate_value[0]
 
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
                 hourly_rate=get_rate,
                 burst_capacity=1
@@ -81,7 +81,7 @@ def test_hourly_rate_function(pytester, run_with_timeout):
                 pass
 
             # Change rate
-            rate_value[0] = RateLimit.per_second(2)  # 2/sec
+            rate_value[0] = Rate.per_second(2)  # 2/sec
 
             # Verify new rate is used
             assert limiter.hourly_rate == 7200
@@ -99,15 +99,15 @@ def test_exception_tracking(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_exception_tracking(make_shared_json):
             shared = make_shared_json(name="exception_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=10
             )
 
@@ -139,8 +139,8 @@ def test_max_calls_limit(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_max_calls(make_shared_json):
@@ -151,12 +151,13 @@ def test_max_calls_limit(pytester, run_with_timeout):
             def on_max_calls(event):
                 callback_data.append((event.limiter_id, event.call_count, event.max_calls))
 
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(10),  # High rate to avoid waiting
+                hourly_rate=Rate.per_second(10),  # High rate to avoid waiting
                 burst_capacity=10,
                 max_calls=3,
-                on_max_calls_callback=on_max_calls
+                on_max_calls_callback=on_max_calls,
+                num_calls_between_checks=1
             )
 
             # Make 3 calls
@@ -182,8 +183,8 @@ def test_rate_drift_detection(pytester, run_with_timeout):
         import time
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_drift_callback(make_shared_json):
@@ -202,9 +203,9 @@ def test_rate_drift_detection(pytester, run_with_timeout):
                     'exceptions': event.exceptions
                 })
 
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_hour(100),  # Very low rate for testing
+                hourly_rate=Rate.per_hour(100),  # Very low rate for testing
                 burst_capacity=100,
                 max_drift=0.5,  # 50% tolerance
                 num_calls_between_checks=5,  # Check every 5 calls
@@ -245,15 +246,15 @@ def test_context_properties(pytester, run_with_timeout):
         import time
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_context_props(make_shared_json):
             shared = make_shared_json(name="context_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(2),
+                hourly_rate=Rate.per_second(2),
                 burst_capacity=5
             )
 
@@ -269,9 +270,9 @@ def test_context_properties(pytester, run_with_timeout):
         def test_start_time(make_shared_json):
             \"\"\"Test that start_time property returns the timestamp of the first call.\"\"\"
             shared = make_shared_json(name="start_time_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(10),
+                hourly_rate=Rate.per_second(10),
                 burst_capacity=5
             )
 
@@ -314,16 +315,16 @@ def test_concurrent_workers(pytester, run_with_timeout):
         import time
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         @pytest.fixture(scope="session")
         def rate_limiter(make_shared_json):
             shared = make_shared_json(name="concurrent_test")
-            return TokenBucketRateLimiter(
+            return TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=2
             )
 
@@ -352,17 +353,17 @@ def test_burst_capacity_default(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_default_burst(make_shared_json):
             shared = make_shared_json(name="burst_default")
 
             # For rate of 1000/hr, default burst should be 100 (10%)
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_hour(1000)
+                hourly_rate=Rate.per_hour(1000)
             )
 
             # Trigger initialization
@@ -373,9 +374,9 @@ def test_burst_capacity_default(pytester, run_with_timeout):
 
             # For very low rates, minimum should be 1
             shared2 = make_shared_json(name="burst_min")
-            limiter2 = TokenBucketRateLimiter(
+            limiter2 = TokenBucketPacer(
                 shared_state=shared2,
-                hourly_rate=RateLimit.per_hour(5)
+                hourly_rate=Rate.per_hour(5)
             )
 
             with limiter2():

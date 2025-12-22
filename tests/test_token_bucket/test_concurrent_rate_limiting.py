@@ -9,9 +9,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 from pytest_xdist_rate_limit import (
-    RateLimit,
+    Rate,
     SharedJson,
-    TokenBucketRateLimiter,
+    TokenBucketPacer,
 )
 
 
@@ -37,9 +37,9 @@ def test_concurrent_workers_respect_rate_limit(tmp_path):
         lock_file=lock_file,
     )
 
-    limiter = TokenBucketRateLimiter(
+    limiter = TokenBucketPacer(
         shared_state=shared_state,
-        hourly_rate=RateLimit.per_second(1),  # 1 call per second
+        hourly_rate=Rate.per_second(1),  # 1 call per second
         burst_capacity=1,  # No burst allowance
         max_drift=0.5,
         num_calls_between_checks=1000,
@@ -93,9 +93,9 @@ def test_concurrent_workers_with_burst_capacity(tmp_path):
         lock_file=lock_file,
     )
 
-    limiter = TokenBucketRateLimiter(
+    limiter = TokenBucketPacer(
         shared_state=shared_state,
-        hourly_rate=RateLimit.per_second(1),  # 1 call per second
+        hourly_rate=Rate.per_second(1),  # 1 call per second
         burst_capacity=3,  # Allow 3 rapid calls
         max_drift=0.5,
         num_calls_between_checks=1000,
@@ -149,9 +149,9 @@ def test_negative_tokens_prevent_race_condition(tmp_path):
         lock_file=lock_file,
     )
 
-    limiter = TokenBucketRateLimiter(
+    limiter = TokenBucketPacer(
         shared_state=shared_state,
-        hourly_rate=RateLimit.per_second(2),  # 2 calls per second
+        hourly_rate=Rate.per_second(2),  # 2 calls per second
         burst_capacity=1,  # Only 1 token available initially
         max_drift=0.5,
         num_calls_between_checks=1000,
