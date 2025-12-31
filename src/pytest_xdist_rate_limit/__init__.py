@@ -15,7 +15,7 @@ from .token_bucket_rate_limiter import TokenBucketPacer
 # Backward compatibility aliases
 TokenBucketRateLimiter = TokenBucketPacer
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "make_shared_json",
     "make_pacer",

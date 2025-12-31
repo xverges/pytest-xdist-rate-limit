@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/xverges/pytest-xdist-rate-limit/compare/v1.0.0...v1.1.0) (2025-12-31)
+
+
+### Features
+
+* periodic callbacks ([#24](https://github.com/xverges/pytest-xdist-rate-limit/issues/24)) ([ff5c00c](https://github.com/xverges/pytest-xdist-rate-limit/commit/ff5c00ca4bc496b4da7843ebfd78c9b408e30af1))
+
 ## [1.0.0](https://github.com/xverges/pytest-xdist-rate-limit/compare/v0.3.3...v1.0.0) (2025-11-24)
 
 
