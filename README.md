@@ -23,6 +23,7 @@ Set the rate at which pytest-xdist workers can run tests.
 * Python 3.9+
 * pytest >= 8.4.2
 * pytest-xdist >= 3.8.0
+* fastdigest >= 0.3.2
 * filelock >= 3.0.0
 
 ## Installation
