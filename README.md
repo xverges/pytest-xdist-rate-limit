@@ -23,6 +23,7 @@ Set the rate at which pytest-xdist workers can run tests.
 * Python 3.9+
 * pytest >= 8.4.2
 * pytest-xdist >= 3.8.0
+* fastdigest >= 0.3.2
 * filelock >= 3.0.0
 
 ## Installation
@@ -36,9 +37,9 @@ pip install pytest-xdist-rate-limit
 See the [`examples/`](https://github.com/xverges/pytest-xdist-rate-limit/tree/main/examples)
 folder for working examples.
 
-### Rate Limiting
+### Call Pacing
 
-Use `make_rate_limiter` to enforce rate limits across workers.
+Use `make_pacer` to generate load at a controlled rate across workers.
 
 Example using `pytest_xdist_load_testing` to run  ~80% of `test_get` and
 ~20% `test_put` for 10K calls, or until we detect that we cannot keep with
@@ -47,31 +48,44 @@ the requested rate 10 calls per second.
 ```python
 import pytest
 from pytest_xdist_load_testing import stop_load_testing, weight
-from pytest_xdist_rate_limit import RateLimit
+from pytest_xdist_rate_limit import Rate
 
 @pytest.fixture(scope="session")
-def pacer(request, make_rate_limiter):
-    """Rate limiter for calls to SUT"""
+def pacer(request, make_pacer):
+    """Pacer for generating load to SUT"""
 
-    def on_drift(event):
-        """Called when rate drift exceeds max_drift threshold.
+    def on_periodic_check(event):
+        """Called every N calls to monitor performance metrics.
+        
+        Provides detailed metrics including:
+        - Current vs target rate and drift
+        - Call duration percentiles (p50, p90, p99)
+        - Wait time percentiles
+        - Worker count and sample statistics
         """
-        msg = (f"Rate drift for {event.limiter_id}: "
-               f"current={event.current_rate:.2f}/hr, target={event.target_rate}/hr, "
-               f"drift={event.drift:.2%}")
-        stop_load_testing(msg)
+        # Check drift manually
+        if event.drift is not None and event.drift > 0.2:
+            msg = (f"Rate drift detected: current={event.current_rate:.2f}/hr, "
+                   f"target={event.target_rate}/hr, drift={event.drift:.2%}")
+            stop_load_testing(msg)
+        
+        # Log performance metrics
+        if event.duration_p50 is not None:
+            print(f"Performance: p50={event.duration_p50*1000:.1f}ms, "
+                  f"p90={event.duration_p90*1000:.1f}ms, "
+                  f"p99={event.duration_p99*1000:.1f}ms")
 
     def on_max_calls(event):
-        """Called when max_calls limit is reached.
-        """
+        """Called when max_calls limit is reached."""
         msg = f"Reached {event.max_calls} calls in {event.elapsed_time:.1f}s"
         stop_load_testing(msg)
 
-    return make_rate_limiter(
+    return make_pacer(
         name="pacer",
-        hourly_rate=RateLimit.per_second(10),  # 10 calls/second
-        max_drift=0.2,  # 20% tolerance
-        on_drift_callback=on_drift,
+        hourly_rate=Rate.per_second(10),  # 10 calls/second
+        num_calls_between_checks=50,  # Check every 50 calls
+        seconds_before_first_check=10.0,  # Wait 10s before first check
+        on_periodic_check_callback=on_periodic_check,
         max_calls=10_000,
         on_max_calls_callback=on_max_calls
     )
@@ -79,13 +93,13 @@ def pacer(request, make_rate_limiter):
 @weight(80)
 def test_get(pacer):
     with pacer():
-        # Context entry waits if rate limit would be exceeded
+        # Context entry waits to maintain target rate
         response = api.get("/data")
 
 @weight(20)
 def test_put(pacer):
     with pacer() as ctx:
-        # Context entry waits if rate limit would be exceeded
+        # Context entry waits to maintain target rate
         response = api.put(f"/data/{ctx.call_count}")
 ```
 

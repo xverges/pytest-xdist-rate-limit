@@ -1,14 +1,14 @@
 """
-Example: Rate limiting with automatic drift detection
+Example: Call pacing with automatic drift detection
 
 Run with: pytest --tb=no -n 2 --load-test examples/test_rate_limiter_example.py
 
 This demonstrates:
-1. Using make_rate_limiter to make calls at a specific rate
+1. Using make_pacer to generate load at a specific rate
 2. Automatic rate drift detection across workers
-3. Session exit when rate limits are violated
-4. Shared state tracking for rate limiting
-5. How entering the rate limiter context causes waiting when rate limit is reached
+3. Session exit when pacing targets are violated
+4. Shared state tracking for call pacing
+5. How entering the pacer context causes waiting when rate limit is reached
 
 TEST_CODE:
 ```python
@@ -30,7 +30,7 @@ import time
 import pytest
 from pytest_xdist_load_testing import stop_load_testing, weight
 
-from pytest_xdist_rate_limit import RateLimit, RateLimitTimeout
+from pytest_xdist_rate_limit import Rate, RateLimitTimeout
 
 
 class SystemUnderTest:
@@ -48,8 +48,8 @@ class SystemUnderTest:
 
 
 @pytest.fixture(scope="session")
-def fast_pacer(make_rate_limiter, request):
-    """Rate limiter that exits session if rate drift exceeds 10%."""
+def fast_pacer(make_pacer, request):
+    """Pacer that exits session if rate drift exceeds 10%."""
 
     def on_drift(event):
         """Exit session when drift exceeds threshold."""
@@ -60,9 +60,9 @@ def fast_pacer(make_rate_limiter, request):
         )
         stop_load_testing(request, message)
 
-    return make_rate_limiter(
+    return make_pacer(
         name="fast_service",
-        hourly_rate=RateLimit.per_second(10_000),
+        hourly_rate=Rate.per_second(10_000),
         burst_capacity=20,
         max_drift=0.1,
         num_calls_between_checks=20,
@@ -73,11 +73,11 @@ def fast_pacer(make_rate_limiter, request):
 
 
 @pytest.fixture(scope="session")
-def slow_pacer(make_rate_limiter):
-    """Rate limiter with very low rate to demonstrate waiting behavior."""
-    return make_rate_limiter(
+def slow_pacer(make_pacer):
+    """Pacer with very low rate to demonstrate waiting behavior."""
+    return make_pacer(
         name="slow_service",
-        hourly_rate=RateLimit.per_second(1),
+        hourly_rate=Rate.per_second(1),
         burst_capacity=1,
         max_drift=0.5,
         num_calls_between_checks=1000,
@@ -97,7 +97,7 @@ def should_pass():
 
 @weight(80)
 def test_api_read(fast_pacer, should_pass):
-    """60% - Simulates read API calls with rate limiting."""
+    """60% - Simulates read API calls with call pacing."""
     with fast_pacer() as progress:
         SystemUnderTest.read()
         assert progress.call_count >= 1
@@ -108,7 +108,7 @@ def test_api_read(fast_pacer, should_pass):
 
 @weight(5)
 def test_api_write(fast_pacer, should_pass):
-    """15% - Simulates write API calls with rate limiting."""
+    """15% - Simulates write API calls with call pacing."""
     with fast_pacer() as progress:
         SystemUnderTest.write()
         assert progress.call_count >= 1
@@ -118,7 +118,7 @@ def test_api_write(fast_pacer, should_pass):
 
 @weight(5)
 def test_api_delete(fast_pacer, should_pass):
-    """5% - Simulates delete API calls with rate limiting."""
+    """5% - Simulates delete API calls with call pacing."""
     with fast_pacer() as progress:
         SystemUnderTest.delete()
         assert progress.call_count >= 1
@@ -129,15 +129,15 @@ def test_api_delete(fast_pacer, should_pass):
 
 @weight(10)
 def test_slow_api_demonstrates_waiting(slow_pacer):
-    """Demonstrates how entering the rate limiter context causes waiting when tokens are exhausted."""
+    """Demonstrates how entering the pacer context causes waiting when tokens are exhausted."""
     try:
       with slow_pacer(timeout=1) as progress:
-          # Verify rate limiting: with 1 call/second rate, we shouldn't have more calls
+          # Verify pacing: with 1 call/second rate, we shouldn't have more calls
           # than the elapsed time (in seconds) plus one (for burst capacity)
           elapsed_seconds = time.time() - progress.start_time
           max_expected_calls = elapsed_seconds + 1
           assert progress.call_count <= max_expected_calls, (
-              f"Rate limit violated: {progress.call_count} calls in {elapsed_seconds:.2f}s "
+              f"Pacing violated: {progress.call_count} calls in {elapsed_seconds:.2f}s "
               f"(max expected: {max_expected_calls:.0f})"
           )
     except RateLimitTimeout:

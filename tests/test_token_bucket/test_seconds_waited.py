@@ -7,15 +7,15 @@ def test_seconds_waited_no_wait(pytester, run_with_timeout):
         """
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_no_wait(make_shared_json):
             shared = make_shared_json(name="no_wait_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(10),
+                hourly_rate=Rate.per_second(10),
                 burst_capacity=5
             )
 
@@ -37,15 +37,15 @@ def test_seconds_waited_with_wait(pytester, run_with_timeout):
         import time
         import pytest
         from pytest_xdist_rate_limit import (
-            TokenBucketRateLimiter,
-            RateLimit
+            TokenBucketPacer,
+            Rate
         )
 
         def test_with_wait(make_shared_json):
             shared = make_shared_json(name="wait_test")
-            limiter = TokenBucketRateLimiter(
+            limiter = TokenBucketPacer(
                 shared_state=shared,
-                hourly_rate=RateLimit.per_second(1),
+                hourly_rate=Rate.per_second(1),
                 burst_capacity=2
             )
 

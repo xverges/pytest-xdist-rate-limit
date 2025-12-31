@@ -1,18 +1,18 @@
 """
-Example: Rate limiting session-scoped fixture creation across workers
+Example: Pacing session-scoped fixture creation across workers
 
-This demonstrates how to rate limit the creation of session-scoped fixtures
+This demonstrates how to pace the creation of session-scoped fixtures
 across multiple pytest-xdist workers. Each worker creates the fixture once,
-and the rate limiter ensures they don't all create it simultaneously.
+and the pacer ensures they don't all create it simultaneously.
 
 Run with:
   pytest examples/test_session_fixture_rate_limiting.py -n 4 -v --capture=no -p no:terminalprogress
 
 Key concepts:
 1. Session fixtures are created once per worker
-2. Rate limiter coordinates fixture creation across workers
+2. Pacer coordinates fixture creation across workers
 3. Tests wait for all workers to complete fixture creation before verifying
-4. Tracker fixture provides visibility into the rate limiting behavior
+4. Tracker fixture provides visibility into the pacing behavior
 5. on_last_worker callback generates a final report when all workers complete
 
 TEST_CODE:
@@ -34,7 +34,7 @@ from datetime import datetime
 
 import pytest
 
-from pytest_xdist_rate_limit import RateLimit
+from pytest_xdist_rate_limit import Rate
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +67,10 @@ def fixture_tracker(make_shared_json):
         report_lines = [
             "",
             "=" * 70,
-            "SESSION FIXTURE RATE LIMITING REPORT",
+            "SESSION FIXTURE PACING REPORT",
             "=" * 70,
             f"Total workers: {len(workers)}",
-            "Rate limit: 15 calls/minute (1 every 4 seconds)",
+            "Target rate: 15 calls/minute (1 every 4 seconds)",
             "Burst capacity: 1",
         ]
 
@@ -95,9 +95,9 @@ def fixture_tracker(make_shared_json):
             report_lines.append(f"Time from first entry to last exit: {total_duration:.2f}s")
 
             if total_wait > 2:
-                report_lines.append("✓ Rate limiting verified successfully!")
+                report_lines.append("✓ Call pacing verified successfully!")
             else:
-                report_lines.append("⚠ Warning: Expected more wait time for rate limiting")
+                report_lines.append("⚠ Warning: Expected more wait time for call pacing")
 
         report_lines.append("=" * 70)
 
@@ -111,11 +111,11 @@ def fixture_tracker(make_shared_json):
 
 
 @pytest.fixture(scope="session")
-def session_throttler(make_rate_limiter):
-    """Rate limiter for session fixture creation."""
-    return make_rate_limiter(
+def session_throttler(make_pacer):
+    """Pacer for session fixture creation."""
+    return make_pacer(
         name="session_fixture_throttler",
-        hourly_rate=RateLimit.per_minute(15),  # 15 calls per minute = 1 every 4 seconds
+        hourly_rate=Rate.per_minute(15),  # 15 calls per minute = 1 every 4 seconds
         max_drift=0.3,
         burst_capacity=1,
     )
@@ -123,7 +123,7 @@ def session_throttler(make_rate_limiter):
 
 @pytest.fixture(scope="session")
 def throttled_session_fixture(session_throttler, fixture_tracker, worker_id):
-    """Session fixture that is rate limited during creation."""
+    """Session fixture that is paced during creation."""
     entry_time = time.time()
 
     with session_throttler() as ctx:
@@ -191,7 +191,7 @@ def test_worker(worker_num, throttled_session_fixture, fixture_tracker):
 
 
 def test_verify_rate_limiting(throttled_session_fixture, fixture_tracker):
-    """Verify that fixture creation was actually rate limited across workers."""
+    """Verify that fixture creation was actually paced across workers."""
     # Wait for all workers to complete
     assert wait_for_all_workers(fixture_tracker, expected_workers=2, timeout=30), \
         "Timeout waiting for all workers"
@@ -203,7 +203,7 @@ def test_verify_rate_limiting(throttled_session_fixture, fixture_tracker):
     assert len(workers) >= 1, f"Expected at least 1 worker, got {len(workers)}"
 
 
-    # Verify rate limiting worked
+    # Verify pacing worked
     total_wait = sum(w["waited"] for w in workers.values())
     # With rate of 15/minute (4s between calls) and burst_capacity=1,
     # at least one worker should have waited significantly
@@ -212,4 +212,4 @@ def test_verify_rate_limiting(throttled_session_fixture, fixture_tracker):
             f"got {total_wait:.2f}s total"
     )
 
-    log_output("✓ Rate limiting verified successfully!")
+    log_output("✓ Call pacing verified successfully!")
